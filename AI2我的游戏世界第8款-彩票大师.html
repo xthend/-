@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>彩票大师</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; margin: 0; padding: 0; font-size: 17px; }
+    .container { max-width: 520px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 16px #0001; padding: 36px 20px; }
+    h1 { text-align: center; color: #2d8cf0; letter-spacing: 2px; margin-bottom: 18px; }
+    .game-mode { display: flex; justify-content: center; margin-bottom: 24px; gap: 10px; }
+    .game-mode button { margin: 0 8px; padding: 8px 24px; border: none; border-radius: 8px; background: #e6e6e6; color: #333; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+    .game-mode button.active { background: #2d8cf0; color: #fff; }
+    .section { margin-bottom: 22px; }
+    .balls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .ball { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; cursor: pointer; border: 2px solid #eee; background: #f7f7f7; transition: background 0.2s, border 0.2s; }
+    .ball.selected { background: #2d8cf0; color: #fff; border: 2px solid #2d8cf0; }
+    .ball.red { background: #ffeaea; color: #ff4d4f; border: 2px solid #ffb3b3; }
+    .ball.blue { background: #e6f0ff; color: #1890ff; border: 2px solid #91caff; }
+    .ball.gray { background: #eee; color: #aaa; border: 2px solid #aaa; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
+    .actions button { padding: 6px 14px; border: none; border-radius: 7px; background: #2d8cf0; color: #fff; font-size: 15px; cursor: pointer; transition: background 0.2s; min-width: 70px; }
+    .actions button:disabled { background: #ccc; cursor: not-allowed; }
+    .actions input[type=number] { height: 30px; font-size: 15px; border-radius: 5px; border: 1px solid #d9d9d9; padding: 0 6px; margin: 0 2px; }
+    .actions select { height: 32px; font-size: 15px; border-radius: 5px; border: 1px solid #d9d9d9; margin-right: 2px; }
+    .result { background: #f0f9ff; border-left: 4px solid #2d8cf0; padding: 12px 16px; border-radius: 6px; margin-top: 16px; }
+    .lottery-balls { display: flex; gap: 8px; margin-top: 8px; }
+    .lottery-balls .ball { cursor: default; }
+    .open-area { background: #fffbe6; border-radius: 10px; border: 1.5px solid gold; margin-bottom: 28px; padding: 14px 10px 10px 10px; box-shadow: 0 0 8px #ffd70055; text-align: center; animation: openfade 1s; font-size: 18px; }
+    .gold-animate { border: 2px solid gold !important; box-shadow: 0 0 10px #ffd70088; animation: goldflash 1.2s linear infinite alternate; }
+    @keyframes goldflash {
+      0% { box-shadow: 0 0 10px #ffd70088, 0 0 0 #fff0; }
+      100% { box-shadow: 0 0 24px #ffd700cc, 0 0 8px #fffbe6; }
+    }
+    @keyframes openfade {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .section .number-line { margin: 10px 0 14px 0; padding: 8px 10px; border-radius: 10px; font-size: 17px; line-height: 2.1; transition: box-shadow 0.2s; }
+    .section .number-line:not(:last-child) { margin-bottom: 14px; }
+    .section .number-line.winning { border: 2px solid #52c41a; box-shadow: 0 0 8px #b7eb8f; background: #f6ffed; color: #222; }
+    .section .number-line.losing { color: #aaa; background: #fafafa; border: 1px solid #eee; }
+    @media (max-width: 600px) {
+      .container { padding: 10px 2px; }
+      .balls { gap: 4px; }
+      .ball { width: 30px; height: 30px; font-size: 14px; }
+      .actions { gap: 6px; }
+      .open-area { font-size: 15px; }
+      .section .number-line { font-size: 15px; padding: 6px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>彩票大师</h1>
+    <div class="game-mode">
+      <button id="mode-ssq" class="active">双色球</button>
+      <button id="mode-dlt">大乐透</button>
+    </div>
+    <div id="game-area"></div>
+  </div>
+  <script>
+    // 游戏配置
+    const configs = {
+      ssq: {
+        name: '双色球',
+        red: { count: 6, max: 33 },
+        blue: { count: 1, max: 16 },
+        prize: [
+          { matchRed: 6, matchBlue: 1, name: '一等奖', bonus: '1000万' },
+          { matchRed: 6, matchBlue: 0, name: '二等奖', bonus: '150万' },
+          { matchRed: 5, matchBlue: 1, name: '三等奖', bonus: '3000元' },
+          { matchRed: 5, matchBlue: 0, name: '四等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 1, name: '四等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 0, name: '五等奖', bonus: '10元' },
+          { matchRed: 3, matchBlue: 1, name: '五等奖', bonus: '10元' },
+          { matchRed: 2, matchBlue: 1, name: '六等奖', bonus: '5元' },
+          { matchRed: 1, matchBlue: 1, name: '六等奖', bonus: '5元' },
+          { matchRed: 0, matchBlue: 1, name: '六等奖', bonus: '5元' },
+        ]
+      },
+      dlt: {
+        name: '大乐透',
+        red: { count: 5, max: 35 },
+        blue: { count: 2, max: 12 },
+        prize: [
+          { matchRed: 5, matchBlue: 2, name: '一等奖', bonus: '1000万' },
+          { matchRed: 5, matchBlue: 1, name: '二等奖', bonus: '100万' },
+          { matchRed: 5, matchBlue: 0, name: '三等奖', bonus: '10000元' },
+          { matchRed: 4, matchBlue: 2, name: '四等奖', bonus: '3000元' },
+          { matchRed: 4, matchBlue: 1, name: '五等奖', bonus: '300元' },
+          { matchRed: 3, matchBlue: 2, name: '六等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 0, name: '七等奖', bonus: '100元' },
+          { matchRed: 3, matchBlue: 1, name: '八等奖', bonus: '15元' },
+          { matchRed: 2, matchBlue: 2, name: '八等奖', bonus: '15元' },
+          { matchRed: 3, matchBlue: 0, name: '九等奖', bonus: '5元' },
+          { matchRed: 1, matchBlue: 2, name: '九等奖', bonus: '5元' },
+          { matchRed: 2, matchBlue: 1, name: '九等奖', bonus: '5元' },
+          { matchRed: 0, matchBlue: 2, name: '九等奖', bonus: '5元' },
+        ]
+      }
+    };
+
+    let mode = 'ssq';
+    let userRed = [], userBlue = [];
+    let lotteryRed = [], lotteryBlue = [];
+    let result = null;
+    let betCount = 1; // 注数，默认1
+    let userNumbers = []; // 多注选号
+    let lotteryNumbers = []; // 多注开奖号码
+    let results = []; // 多注结果
+    let jackpotNumbers = null;
+
+    function renderGame() {
+      const cfg = configs[mode];
+      const area = document.getElementById('game-area');
+      area.innerHTML = '';
+      // 选号区
+      const section1 = document.createElement('div');
+      section1.className = 'section';
+      section1.innerHTML = `<b>请选择${cfg.red.count}个红球</b>（1-${cfg.red.max}）`;
+      const ballsRed = document.createElement('div');
+      ballsRed.className = 'balls';
+      for (let i = 1; i <= cfg.red.max; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball' + (userRed.includes(i) ? ' selected red' : '');
+        ball.textContent = i < 10 ? '0' + i : i;
+        ball.onclick = () => {
+          if (userRed.includes(i)) {
+            userRed = userRed.filter(x => x !== i);
+          } else {
+            if (userRed.length < cfg.red.count) userRed.push(i);
+          }
+          renderGame();
+        };
+        ballsRed.appendChild(ball);
+      }
+      section1.appendChild(ballsRed);
+      area.appendChild(section1);
+      // 蓝球/后区
+      const section2 = document.createElement('div');
+      section2.className = 'section';
+      section2.innerHTML = `<b>请选择${cfg.blue.count}个${mode==='ssq'?'蓝球':'后区'}</b>（1-${cfg.blue.max}）`;
+      const ballsBlue = document.createElement('div');
+      ballsBlue.className = 'balls';
+      for (let i = 1; i <= cfg.blue.max; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball' + (userBlue.includes(i) ? ' selected blue' : '');
+        ball.textContent = i < 10 ? '0' + i : i;
+        ball.onclick = () => {
+          if (userBlue.includes(i)) {
+            userBlue = userBlue.filter(x => x !== i);
+          } else {
+            if (userBlue.length < cfg.blue.count) userBlue.push(i);
+          }
+          renderGame();
+        };
+        ballsBlue.appendChild(ball);
+      }
+      section2.appendChild(ballsBlue);
+      area.appendChild(section2);
+      // 操作区
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      // 注数选择器
+      const betSelect = document.createElement('select');
+      [1,5,20,100].forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = `${n}注`;
+        if (betCount === n) opt.selected = true;
+        betSelect.appendChild(opt);
+      });
+      betSelect.onchange = e => {
+        betCount = parseInt(e.target.value);
+        renderGame();
+      };
+      actions.appendChild(betSelect);
+      // 随机选号
+      const btnRand = document.createElement('button');
+      btnRand.textContent = '随机选号';
+      btnRand.onclick = () => {
+        userNumbers = [];
+        for (let i = 0; i < betCount; i++) {
+          userNumbers.push({
+            red: randomBalls(cfg.red.max, cfg.red.count),
+            blue: randomBalls(cfg.blue.max, cfg.blue.count)
+          });
+        }
+        userRed = userNumbers[0].red.slice();
+        userBlue = userNumbers[0].blue.slice();
+        result = null;
+        results = [];
+        renderGame();
+      };
+      actions.appendChild(btnRand);
+      // 清空选号
+      const btnClear = document.createElement('button');
+      btnClear.textContent = '清空选号';
+      btnClear.onclick = () => {
+        userRed = [];
+        userBlue = [];
+        userNumbers = [];
+        result = null;
+        results = [];
+        renderGame();
+      };
+      actions.appendChild(btnClear);
+      // 开奖
+      const btnDraw = document.createElement('button');
+      btnDraw.textContent = '开奖';
+      let valid = false;
+      if (userNumbers.length === betCount && userNumbers.length > 0) {
+        valid = userNumbers.every(num => num.red.length === cfg.red.count && num.blue.length === cfg.blue.count);
+      } else {
+        valid = (userRed.length === cfg.red.count && userBlue.length === cfg.blue.count);
+      }
+      btnDraw.disabled = !valid;
+      btnDraw.onclick = () => {
+        if (userNumbers.length === 0) {
+          userNumbers = [{red: userRed.slice(), blue: userBlue.slice()}];
+        }
+        // 只生成一组开奖号码
+        const lRed = randomBalls(cfg.red.max, cfg.red.count);
+        const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+        lotteryNumbers = [{red: lRed, blue: lBlue}];
+        results = [];
+        for (let i = 0; i < betCount; i++) {
+          results.push(checkPrize(userNumbers[i].red, userNumbers[i].blue, lRed, lBlue));
+        }
+        renderGame();
+      };
+      actions.appendChild(btnDraw);
+      // 守号再开奖
+      const btnKeep = document.createElement('button');
+      btnKeep.textContent = '守号再开奖';
+      btnKeep.disabled = !valid;
+      btnKeep.onclick = () => {
+        // 只生成一组新开奖号码，用户号码不变
+        const lRed = randomBalls(cfg.red.max, cfg.red.count);
+        const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+        lotteryNumbers = [{red: lRed, blue: lBlue}];
+        results = [];
+        for (let i = 0; i < betCount; i++) {
+          results.push(checkPrize(userNumbers[i].red, userNumbers[i].blue, lRed, lBlue));
+        }
+        renderGame();
+      };
+      actions.appendChild(btnKeep);
+
+      // 测试开奖
+      const testInput = document.createElement('input');
+      testInput.type = 'number';
+      testInput.min = 1;
+      testInput.max = 100000;
+      testInput.value = 100000;
+      testInput.style.width = '70px';
+      testInput.style.marginLeft = '8px';
+      testInput.title = '最大开奖次数';
+      actions.appendChild(testInput);
+
+      const btnTest = document.createElement('button');
+      btnTest.textContent = '测试开奖';
+      btnTest.disabled = !valid;
+      btnTest.onclick = () => {
+        const maxTimes = Math.max(1, Math.min(100000, parseInt(testInput.value)));
+        let totalCost = 0;
+        let totalWin = 0;
+        let times = 0;
+        let jackpotHit = false;
+        let jackpotIdx = -1;
+        let jackpotName = '';
+        const cfg = configs[mode];
+        // 奖项统计（合并同名奖项）
+        const prizeCount = {};
+        cfg.prize.forEach(p => { prizeCount[p.name] = 0; });
+        // 多注测试
+        while (times < maxTimes && !jackpotHit) {
+          const lRed = randomBalls(cfg.red.max, cfg.red.count);
+          const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+          totalCost += betCount * 2; // 每次开奖所有注都花钱
+          for (let i = 0; i < betCount; i++) {
+            const user = userNumbers[i];
+            const r = checkPrize(user.red, user.blue, lRed, lBlue);
+            if (r && r.bonus) {
+              // 解析奖金
+              let bonus = 0;
+              if (r.bonus.includes('万')) {
+                bonus = parseFloat(r.bonus) * 10000;
+              } else if (r.bonus.includes('元')) {
+                bonus = parseFloat(r.bonus);
+              }
+              totalWin += bonus;
+              if (prizeCount[r.name] !== undefined) prizeCount[r.name]++;
+              if (r.name === cfg.prize[0].name) {
+                jackpotHit = true;
+                jackpotIdx = times + 1;
+                jackpotName = r.name;
+                jackpotNumbers = {red: lRed.slice(), blue: lBlue.slice()};
+                break;
+              }
+            }
+          }
+          times++;
+        }
+        const profit = totalWin - totalCost;
+        // 结构化高亮内容
+        let highlight = `<div style='margin-bottom:8px;'><b>开奖次数：</b><span style='color:#2d8cf0;font-weight:bold;'>${times}</span>，<b>注数：</b>${betCount}</div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>总花费：</b><span style='color:#fa541c;font-weight:bold;'>${totalCost}元</span></div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>中奖金额：</b><span style='color:#52c41a;font-weight:bold;'>${totalWin}元</span></div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>盈亏：</b><span style='color:${profit>=0?'#52c41a':'#fa541c'};font-weight:bold;'>${profit>=0?'+'+profit:profit}元</span></div>`;
+        // 奖项统计
+        const shown = new Set();
+        let prizeMsg = '';
+        for (const p of cfg.prize) {
+          if (!shown.has(p.name) && prizeCount[p.name]) {
+            prizeMsg += `<div><b>${p.name}：</b><span style='color:#2d8cf0;font-weight:bold;'>${prizeCount[p.name]}</span> 次</div>`;
+            shown.add(p.name);
+          }
+        }
+        if (prizeMsg) highlight += `<div style='margin:10px 0 8px 0;'><b>各奖项中奖次数：</b>${prizeMsg}</div>`;
+        if (jackpotHit) {
+          highlight += `<div style='margin:10px 0 8px 0;'><b>头奖出现：</b>第<span style='color:#faad14;font-weight:bold;'>${jackpotIdx}</span>次开奖，<b>奖项：</b><span style='color:#faad14;font-weight:bold;'>${jackpotName}</span></div>`;
+        } else {
+          highlight += `<div style='margin:10px 0 8px 0;'><b>头奖：</b><span style='color:#aaa;'>未中头奖</span></div>`;
+        }
+        showTestResult('', jackpotHit ? jackpotNumbers : null, highlight);
+      };
+      actions.appendChild(btnTest);
+
+      area.appendChild(actions);
+      // 开奖区（始终显示）
+      const openDiv = document.createElement('div');
+      openDiv.className = 'open-area';
+      openDiv.innerHTML = `<b>开奖号码：</b>`;
+      let lot = (lotteryNumbers && lotteryNumbers[0]) ? lotteryNumbers[0] : null;
+      const ballsDiv = document.createElement('div');
+      ballsDiv.className = 'lottery-balls';
+      if (lot) {
+        lot.red.slice().sort((a,b)=>a-b).forEach(n => {
+          const b = document.createElement('div');
+          b.className = 'ball gold-animate red';
+          b.textContent = n < 10 ? '0'+n : n;
+          ballsDiv.appendChild(b);
+        });
+        lot.blue.slice().sort((a,b)=>a-b).forEach(n => {
+          const b = document.createElement('div');
+          b.className = 'ball gold-animate blue';
+          b.textContent = n < 10 ? '0'+n : n;
+          ballsDiv.appendChild(b);
+        });
+      } else {
+        // 未开奖时显示空球或提示
+        for (let i = 0; i < cfg.red.count; i++) {
+          const b = document.createElement('div');
+          b.className = 'ball red';
+          b.textContent = '--';
+          ballsDiv.appendChild(b);
+        }
+        for (let i = 0; i < cfg.blue.count; i++) {
+          const b = document.createElement('div');
+          b.className = 'ball blue';
+          b.textContent = '--';
+          ballsDiv.appendChild(b);
+        }
+      }
+      openDiv.appendChild(ballsDiv);
+      area.appendChild(openDiv);
+
+      // 多注已选号码展示（含中奖结果）
+      if (userNumbers.length > 1) {
+        const multiDiv = document.createElement('div');
+        multiDiv.className = 'section';
+        multiDiv.innerHTML = '<b>已选号码：</b>';
+        userNumbers.forEach((num, idx) => {
+          const line = document.createElement('div');
+          line.className = 'number-line';
+          // 注号前缀，固定宽度
+          const idxSpan = document.createElement('span');
+          idxSpan.textContent = `第${idx+1}注：`;
+          idxSpan.style.display = 'inline-block';
+          idxSpan.style.minWidth = '60px';
+          line.appendChild(idxSpan);
+          // 只用文本显示号码，红区红字，蓝区蓝字
+          const redText = num.red.slice().sort((a,b)=>a-b).map(n => (n < 10 ? '0'+n : n)).join(' ');
+          const blueText = num.blue.slice().sort((a,b)=>a-b).map(n => (n < 10 ? '0'+n : n)).join(' ');
+          const textSpan = document.createElement('span');
+          textSpan.innerHTML = `<span style='color:#ff4d4f'>${redText}</span> + <span style='color:#1890ff'>${blueText}</span>`;
+          textSpan.style.marginRight = '12px';
+          line.appendChild(textSpan);
+          // 中奖结果
+          let resultObj = results[idx];
+          const resultSpan = document.createElement('span');
+          resultSpan.innerHTML = `<b>中奖结果：</b> <span style='font-weight:bold;'>${resultObj ? (resultObj.name + (resultObj.bonus ? '（'+resultObj.bonus+'）' : '')) : ''}</span>`;
+          line.appendChild(resultSpan);
+          // 样式处理
+          if (resultObj) {
+            if (resultObj.name === '未中奖') {
+              line.classList.add('losing');
+            } else {
+              line.classList.add('winning');
+            }
+          }
+          multiDiv.appendChild(line);
+        });
+        area.appendChild(multiDiv);
+      }
+
+      // 多注开奖结果（已合并到已选号码区，移除原结果区）
+    }
+
+    function randomBalls(max, count) {
+      const arr = Array.from({length: max}, (_,i)=>i+1);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr.slice(0, count).sort((a,b)=>a-b);
+    }
+
+    function checkPrize(userRed, userBlue, lotteryRed, lotteryBlue) {
+      const cfg = configs[mode];
+      const matchRed = userRed.filter(n => lotteryRed.includes(n)).length;
+      const matchBlue = userBlue.filter(n => lotteryBlue.includes(n)).length;
+      for (const p of cfg.prize) {
+        if (matchRed === p.matchRed && matchBlue === p.matchBlue) {
+          return p;
+        }
+      }
+      return { name: '未中奖', bonus: '' };
+    }
+
+    // 玩法切换
+    document.getElementById('mode-ssq').onclick = () => {
+      mode = 'ssq';
+      userRed = [];
+      userBlue = [];
+      result = null;
+      document.getElementById('mode-ssq').classList.add('active');
+      document.getElementById('mode-dlt').classList.remove('active');
+      renderGame();
+    };
+    document.getElementById('mode-dlt').onclick = () => {
+      mode = 'dlt';
+      userRed = [];
+      userBlue = [];
+      result = null;
+      document.getElementById('mode-dlt').classList.add('active');
+      document.getElementById('mode-ssq').classList.remove('active');
+      renderGame();
+    };
+
+    // 测试开奖弹窗
+    function showTestResult(msg, jackpotNumbers, highlight) {
+      // 移除已有弹窗
+      const old = document.getElementById('test-modal');
+      if (old) old.remove();
+      const modal = document.createElement('div');
+      modal.id = 'test-modal';
+      modal.style.position = 'fixed';
+      modal.style.left = '0';
+      modal.style.top = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.25)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '9999';
+      const box = document.createElement('div');
+      box.style.background = '#fff';
+      box.style.borderRadius = '12px';
+      box.style.padding = '28px 24px 18px 24px';
+      box.style.minWidth = '320px';
+      box.style.maxWidth = '90vw';
+      box.style.boxShadow = '0 4px 32px #0002';
+      box.style.fontSize = '17px';
+      box.style.lineHeight = '2';
+      // 优化内容结构
+      box.innerHTML = highlight;
+      if (jackpotNumbers) {
+        let redStr = jackpotNumbers.red.sort((a,b)=>a-b).map(n=>`<span style='color:#ff4d4f;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+        let blueStr = jackpotNumbers.blue.sort((a,b)=>a-b).map(n=>`<span style='color:#1890ff;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+        const colorLine = `<div style='margin-top:8px;'><b>开奖号码：</b>${redStr} + ${blueStr}</div>`;
+        box.innerHTML += colorLine;
+      }
+      const btn = document.createElement('button');
+      btn.textContent = '关闭';
+      btn.style.marginTop = '18px';
+      btn.style.padding = '6px 24px';
+      btn.style.background = '#2d8cf0';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '6px';
+      btn.style.fontSize = '16px';
+      btn.style.cursor = 'pointer';
+      btn.onclick = () => modal.remove();
+      box.appendChild(btn);
+      modal.appendChild(box);
+      document.body.appendChild(modal);
+    }
+
+    renderGame();
+  </script>
+</body>
+</html> 
