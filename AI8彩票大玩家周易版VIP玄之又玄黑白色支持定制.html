@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>彩票大玩家</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); margin: 0; padding: 0; font-size: 17px; }
+    .container { 
+      max-width: 520px; 
+      margin: 40px auto; 
+      background: rgba(255,255,255,0.9); 
+      border-radius: 16px; 
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+      padding: 36px 20px; 
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    h1 { text-align: center; color: #2d8cf0; letter-spacing: 2px; margin-bottom: 18px; }
+    .game-mode { display: flex; justify-content: center; margin-bottom: 24px; gap: 10px; }
+    .game-mode button { margin: 0 8px; padding: 8px 24px; border: none; border-radius: 8px; background: #e6e6e6; color: #333; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+    .game-mode button.active { background: #2d8cf0; color: #fff; }
+    .section { margin-bottom: 22px; }
+    .balls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .ball { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; cursor: pointer; border: 2px solid #eee; background: #f7f7f7; transition: all 0.3s ease; }
+    .ball.selected { background: #2d8cf0; color: #fff; border: 2px solid #2d8cf0; }
+    .ball.red { background: #ffeaea; color: #ff4d4f; border: 2px solid #ffb3b3; }
+    .ball.blue { background: #e6f0ff; color: #1890ff; border: 2px solid #91caff; }
+    .ball.gray { background: #eee; color: #aaa; border: 2px solid #aaa; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
+    .actions button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #2d8cf0;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 100px;
+      margin: 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .actions button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    .actions input[type=number] { height: 30px; font-size: 15px; border-radius: 5px; border: 1px solid #d9d9d9; padding: 0 6px; margin: 0 2px; }
+    .actions select { height: 32px; font-size: 15px; border-radius: 5px; border: 1px solid #d9d9d9; margin-right: 2px; }
+    .result { background: #f0f9ff; border-left: 4px solid #2d8cf0; padding: 12px 16px; border-radius: 6px; margin-top: 16px; }
+    .lottery-balls { display: flex; gap: 8px; margin-top: 8px; }
+    .lottery-balls .ball { cursor: default; }
+    .open-area {
+      background: linear-gradient(135deg, rgba(255,251,230,0.9) 0%, rgba(255,229,143,0.8) 100%);
+      box-shadow: 0 4px 20px rgba(255,215,0,0.2);
+      border-radius: 10px;
+      border: 1.5px solid gold;
+      margin-bottom: 28px;
+      padding: 14px 10px 10px 10px;
+      text-align: center;
+      animation: openfade 1s;
+      font-size: 18px;
+    }
+    .gold-animate { border: 2px solid gold !important; box-shadow: 0 0 10px #ffd70088; animation: goldflash 1.2s linear infinite alternate; }
+    @keyframes goldflash {
+      0% { box-shadow: 0 0 10px #ffd70088, 0 0 0 #fff0; }
+      100% { box-shadow: 0 0 24px #ffd700cc, 0 0 8px #fffbe6; }
+    }
+    @keyframes openfade {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .section .number-line { margin: 10px 0 14px 0; padding: 8px 10px; border-radius: 10px; font-size: 17px; line-height: 2.1; transition: box-shadow 0.2s; }
+    .section .number-line:not(:last-child) { margin-bottom: 14px; }
+    .section .number-line.winning {
+      background: linear-gradient(135deg, rgba(246,255,237,0.9) 0%, rgba(183,235,143,0.8) 100%);
+      box-shadow: 0 4px 12px rgba(82,196,26,0.2);
+      border: 2px solid #52c41a;
+      box-shadow: 0 0 8px #b7eb8f;
+      background: #f6ffed;
+      color: #222;
+    }
+    .section .number-line.losing { color: #aaa; background: #fafafa; border: 1px solid #eee; }
+    @media (max-width: 600px) {
+      .container { padding: 20px 10px; max-width: 100%; margin: 20px auto; }
+      .game-mode { flex-wrap: wrap; justify-content: center; }
+      .game-mode button { margin: 4px; padding: 6px 12px; font-size: 14px; }
+      .actions { justify-content: center; gap: 6px; }
+      .actions button {
+        padding: 8px 16px;
+        font-size: 15px;
+        min-width: 80px;
+      }
+      .actions select { height: 30px; font-size: 14px; }
+      .actions input[type=number] { height: 28px; font-size: 14px; }
+      .balls { gap: 4px; }
+      .ball { width: 30px; height: 30px; font-size: 14px; }
+      .open-area { font-size: 15px; }
+      .section .number-line { font-size: 15px; padding: 6px 4px; }
+    }
+    .ball:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="font-size:2.2em;letter-spacing:3px;display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:1.2em;margin-right:10px;">🎯</span>彩票大玩家
+    </h1>
+    <div class="game-mode">
+      <button id="mode-ssq" class="active">双色球</button>
+      <button id="mode-dlt">大乐透</button>
+    </div>
+    <div id="game-area"></div>
+  </div>
+  <div style="text-align:center;color:#888;font-size:13px;margin:30px 0 10px 0;">
+    版权所有人：<a href="weixin://contacts/profile/xthend" style="color:#2d8cf0;text-decoration:underline;" target="_blank">多宝爸</a>
+  </div>
+  <script>
+    // 游戏配置
+    const configs = {
+      ssq: {
+        name: '双色球',
+        red: { count: 6, max: 33 },
+        blue: { count: 1, max: 16 },
+        prize: [
+          { matchRed: 6, matchBlue: 1, name: '一等奖', bonus: '1000万' },
+          { matchRed: 6, matchBlue: 0, name: '二等奖', bonus: '150万' },
+          { matchRed: 5, matchBlue: 1, name: '三等奖', bonus: '3000元' },
+          { matchRed: 5, matchBlue: 0, name: '四等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 1, name: '四等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 0, name: '五等奖', bonus: '10元' },
+          { matchRed: 3, matchBlue: 1, name: '五等奖', bonus: '10元' },
+          { matchRed: 2, matchBlue: 1, name: '六等奖', bonus: '5元' },
+          { matchRed: 1, matchBlue: 1, name: '六等奖', bonus: '5元' },
+          { matchRed: 0, matchBlue: 1, name: '六等奖', bonus: '5元' },
+        ]
+      },
+      dlt: {
+        name: '大乐透',
+        red: { count: 5, max: 35 },
+        blue: { count: 2, max: 12 },
+        prize: [
+          { matchRed: 5, matchBlue: 2, name: '一等奖', bonus: '1000万' },
+          { matchRed: 5, matchBlue: 1, name: '二等奖', bonus: '100万' },
+          { matchRed: 5, matchBlue: 0, name: '三等奖', bonus: '10000元' },
+          { matchRed: 4, matchBlue: 2, name: '四等奖', bonus: '3000元' },
+          { matchRed: 4, matchBlue: 1, name: '五等奖', bonus: '300元' },
+          { matchRed: 3, matchBlue: 2, name: '六等奖', bonus: '200元' },
+          { matchRed: 4, matchBlue: 0, name: '七等奖', bonus: '100元' },
+          { matchRed: 3, matchBlue: 1, name: '八等奖', bonus: '15元' },
+          { matchRed: 2, matchBlue: 2, name: '八等奖', bonus: '15元' },
+          { matchRed: 3, matchBlue: 0, name: '九等奖', bonus: '5元' },
+          { matchRed: 1, matchBlue: 2, name: '九等奖', bonus: '5元' },
+          { matchRed: 2, matchBlue: 1, name: '九等奖', bonus: '5元' },
+          { matchRed: 0, matchBlue: 2, name: '九等奖', bonus: '5元' },
+        ]
+      }
+    };
+
+    let mode = 'ssq';
+    let userRed = [], userBlue = [];
+    let lotteryRed = [], lotteryBlue = [];
+    let result = null;
+    let betCount = 1; // 注数，默认1
+    let userNumbers = []; // 多注选号
+    let lotteryNumbers = []; // 多注开奖号码
+    let results = []; // 多注结果
+    let jackpotNumbers = null;
+    let hasDrawed = false; // 是否已经开奖过
+    let luckyTaskId = 0;
+
+    function renderGame() {
+      const cfg = configs[mode];
+      const area = document.getElementById('game-area');
+      area.innerHTML = '';
+      // 选号区
+      const section1 = document.createElement('div');
+      section1.className = 'section';
+      section1.innerHTML = `<b>请选择${cfg.red.count}个红球</b>（1-${cfg.red.max}）`;
+      const ballsRed = document.createElement('div');
+      ballsRed.className = 'balls';
+      for (let i = 1; i <= cfg.red.max; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball' + (userRed.includes(i) ? ' selected red' : '');
+        ball.textContent = i < 10 ? '0' + i : i;
+        ball.onclick = () => {
+          if (userRed.includes(i)) {
+            userRed = userRed.filter(x => x !== i);
+          } else {
+            if (userRed.length < cfg.red.count) userRed.push(i);
+          }
+          renderGame();
+        };
+        ballsRed.appendChild(ball);
+      }
+      section1.appendChild(ballsRed);
+      area.appendChild(section1);
+      // 蓝球/后区
+      const section2 = document.createElement('div');
+      section2.className = 'section';
+      section2.innerHTML = `<b>请选择${cfg.blue.count}个${mode==='ssq'?'蓝球':'后区'}</b>（1-${cfg.blue.max}）`;
+      const ballsBlue = document.createElement('div');
+      ballsBlue.className = 'balls';
+      for (let i = 1; i <= cfg.blue.max; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball' + (userBlue.includes(i) ? ' selected blue' : '');
+        ball.textContent = i < 10 ? '0' + i : i;
+        ball.onclick = () => {
+          if (userBlue.includes(i)) {
+            userBlue = userBlue.filter(x => x !== i);
+          } else {
+            if (userBlue.length < cfg.blue.count) userBlue.push(i);
+          }
+          renderGame();
+        };
+        ballsBlue.appendChild(ball);
+      }
+      section2.appendChild(ballsBlue);
+      area.appendChild(section2);
+      // 操作区
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      // 注数选择器
+      const betSelect = document.createElement('select');
+      [1,5,20,100,500,1000].forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = `${n}注`;
+        if (betCount === n) opt.selected = true;
+        betSelect.appendChild(opt);
+      });
+      betSelect.onchange = e => {
+        betCount = parseInt(e.target.value);
+        hasDrawed = false;
+        renderGame();
+      };
+      actions.appendChild(betSelect);
+      // 随机选号
+      const btnRand = document.createElement('button');
+      btnRand.textContent = '随机选号';
+      btnRand.onclick = () => {
+        // 只替换机选号码，保留手动加的号码
+        let manualNums = userNumbers.filter(num => num.manual);
+        let autoCount = betCount - manualNums.length;
+        let autoNums = [];
+        for (let i = 0; i < autoCount; i++) {
+          autoNums.push({
+            red: randomBalls(cfg.red.max, cfg.red.count),
+            blue: randomBalls(cfg.blue.max, cfg.blue.count)
+          });
+        }
+        userNumbers = manualNums.concat(autoNums);
+        if (userNumbers.length > 0) {
+          userRed = userNumbers[0].red.slice();
+          userBlue = userNumbers[0].blue.slice();
+        }
+        result = null;
+        results = [];
+        hasDrawed = false;
+        renderGame();
+      };
+      actions.appendChild(btnRand);
+      // 清空选号
+      const btnClear = document.createElement('button');
+      btnClear.textContent = '清空选号';
+      btnClear.onclick = () => {
+        userRed = [];
+        userBlue = [];
+        userNumbers = [];
+        result = null;
+        results = [];
+        hasDrawed = false;
+        renderGame();
+      };
+      actions.appendChild(btnClear);
+      // 手动加一注
+      const btnManualAdd = document.createElement('button');
+      btnManualAdd.textContent = '手动加一注';
+      btnManualAdd.disabled = !(userRed.length === cfg.red.count && userBlue.length === cfg.blue.count);
+      btnManualAdd.onclick = () => {
+        userNumbers.push({red: userRed.slice(), blue: userBlue.slice(), manual: true});
+        userRed = [];
+        userBlue = [];
+        hasDrawed = false;
+        renderGame();
+      };
+      actions.appendChild(btnManualAdd);
+      // 开奖
+      const btnDraw = document.createElement('button');
+      btnDraw.textContent = '开奖';
+      let valid = userNumbers.length > 0 && userNumbers.every(num => num.red.length === cfg.red.count && num.blue.length === cfg.blue.count);
+      btnDraw.disabled = !valid;
+      btnDraw.onclick = () => {
+        if (!hasDrawed) {
+          // 第一次开奖，userNumbers为空时用选号区号码
+          if (userNumbers.length === 0) {
+            userNumbers = [{red: userRed.slice(), blue: userBlue.slice()}];
+          }
+        } else {
+          // 后续开奖只随机非手动号码
+          let manualNums = userNumbers.filter(num => num.manual);
+          let autoCount = betCount - manualNums.length;
+          let autoNums = [];
+          for (let i = 0; i < autoCount; i++) {
+            autoNums.push({
+              red: randomBalls(cfg.red.max, cfg.red.count),
+              blue: randomBalls(cfg.blue.max, cfg.blue.count)
+            });
+          }
+          userNumbers = manualNums.concat(autoNums);
+        }
+        // 只生成一组开奖号码
+        const lRed = randomBalls(cfg.red.max, cfg.red.count);
+        const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+        lotteryNumbers = [{red: lRed, blue: lBlue}];
+        results = [];
+        for (let i = 0; i < userNumbers.length; i++) {
+          results.push(checkPrize(userNumbers[i].red, userNumbers[i].blue, lRed, lBlue));
+        }
+        renderGame();
+        hasDrawed = true;
+      };
+      actions.appendChild(btnDraw);
+      // 守号再开奖
+      const btnKeep = document.createElement('button');
+      btnKeep.textContent = '守号再开奖';
+      btnKeep.disabled = !valid;
+      btnKeep.onclick = () => {
+        // 只生成一组新开奖号码，用户号码不变
+        const lRed = randomBalls(cfg.red.max, cfg.red.count);
+        const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+        lotteryNumbers = [{red: lRed, blue: lBlue}];
+        results = [];
+        for (let i = 0; i < betCount; i++) {
+          results.push(checkPrize(userNumbers[i].red, userNumbers[i].blue, lRed, lBlue));
+        }
+        renderGame();
+      };
+      actions.appendChild(btnKeep);
+
+      // 测试开奖
+      const testInput = document.createElement('input');
+      testInput.type = 'number';
+      testInput.min = 1;
+      testInput.max = 100000;
+      testInput.value = 100000;
+      testInput.style.width = '70px';
+      testInput.style.marginLeft = '8px';
+      testInput.title = '最大开奖次数';
+      actions.appendChild(testInput);
+
+      const btnTest = document.createElement('button');
+      btnTest.textContent = '测试开奖';
+      btnTest.disabled = !valid;
+      btnTest.onclick = () => {
+        const maxTimes = Math.max(1, Math.min(100000, parseInt(testInput.value)));
+        let totalCost = 0;
+        let totalWin = 0;
+        let times = 0;
+        let jackpotHit = false;
+        let jackpotIdx = -1;
+        let jackpotName = '';
+        const cfg = configs[mode];
+        // 奖项统计（合并同名奖项）
+        const prizeCount = {};
+        cfg.prize.forEach(p => { prizeCount[p.name] = 0; });
+        // 多注测试
+        while (times < maxTimes && !jackpotHit) {
+          const lRed = randomBalls(cfg.red.max, cfg.red.count);
+          const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+          totalCost += betCount * 2; // 每次开奖所有注都花钱
+          for (let i = 0; i < betCount; i++) {
+            const user = userNumbers[i];
+            const r = checkPrize(user.red, user.blue, lRed, lBlue);
+            if (r && r.bonus) {
+              // 解析奖金
+              let bonus = 0;
+              if (r.bonus.includes('万')) {
+                bonus = parseFloat(r.bonus) * 10000;
+              } else if (r.bonus.includes('元')) {
+                bonus = parseFloat(r.bonus);
+              }
+              totalWin += bonus;
+              if (prizeCount[r.name] !== undefined) prizeCount[r.name]++;
+              if (r.name === cfg.prize[0].name) {
+                jackpotHit = true;
+                jackpotIdx = times + 1;
+                jackpotName = r.name;
+                jackpotNumbers = {red: lRed.slice(), blue: lBlue.slice()};
+                break;
+              }
+            }
+          }
+          times++;
+        }
+        const profit = totalWin - totalCost;
+        // 结构化高亮内容
+        let highlight = `<div style='margin-bottom:8px;'><b>开奖次数：</b><span style='color:#2d8cf0;font-weight:bold;'>${times}</span>，<b>注数：</b>${betCount}</div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>总花费：</b><span style='color:#fa541c;font-weight:bold;'>${totalCost}元</span></div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>中奖金额：</b><span style='color:#52c41a;font-weight:bold;'>${totalWin}元</span></div>`;
+        highlight += `<div style='margin-bottom:8px;'><b>盈亏：</b><span style='color:${profit>=0?'#52c41a':'#fa541c'};font-weight:bold;'>${profit>=0?'+'+profit:profit}元</span></div>`;
+        // 奖项统计
+        const shown = new Set();
+        let prizeMsg = '';
+        for (const p of cfg.prize) {
+          if (!shown.has(p.name) && prizeCount[p.name]) {
+            prizeMsg += `<div><b>${p.name}：</b><span style='color:#2d8cf0;font-weight:bold;'>${prizeCount[p.name]}</span> 次</div>`;
+            shown.add(p.name);
+          }
+        }
+        if (prizeMsg) highlight += `<div style='margin:10px 0 8px 0;'><b>各奖项中奖次数：</b>${prizeMsg}</div>`;
+        if (jackpotHit) {
+          highlight += `<div style='margin:10px 0 8px 0;'><b>头奖出现：</b>第<span style='color:#faad14;font-weight:bold;'>${jackpotIdx}</span>次开奖，<b>奖项：</b><span style='color:#faad14;font-weight:bold;'>${jackpotName}</span></div>`;
+        } else {
+          highlight += `<div style='margin:10px 0 8px 0;'><b>头奖：</b><span style='color:#aaa;'>未中头奖</span></div>`;
+        }
+        showTestResult('', jackpotHit ? jackpotNumbers : null, highlight);
+      };
+      actions.appendChild(btnTest);
+
+      // 幸运号码组
+      const btnLucky = document.createElement('button');
+      btnLucky.textContent = '幸运号码组';
+      btnLucky.style.background = 'linear-gradient(90deg,#faad14,#52c41a,#1890ff)';
+      btnLucky.style.color = '#fff';
+      btnLucky.style.fontWeight = 'bold';
+      btnLucky.onclick = () => {
+        const thisTaskId = Date.now() + Math.random();
+        luckyTaskId = thisTaskId;
+        const cfg = configs[mode];
+        // 1. 随机1000注
+        let luckyNumbers = [];
+        for (let i = 0; i < 1000; i++) {
+          luckyNumbers.push({
+            red: randomBalls(cfg.red.max, cfg.red.count),
+            blue: randomBalls(cfg.blue.max, cfg.blue.count)
+          });
+        }
+        // 弹窗+进度条
+        let html = `<div style='font-size:18px;font-weight:bold;margin-bottom:10px;'>幸运号码组</div>`;
+        html += `<div style='font-size:15px;color:#888;margin-bottom:10px;'>本功能将随机生成1000组号码，分别进行5次共50万次开奖，统计中奖金额最高的前5组号码。</div>`;
+        html += `<div id='lucky-progress-text' style='margin-bottom:4px;font-size:15px;color:#888;'>正在计算幸运号码组：已完成 0%（0/500000）</div>`;
+        html += `<div id='lucky-progress' style='width:100%;height:18px;background:#eee;border-radius:8px;overflow:hidden;margin-bottom:16px;position:relative;'><div id='lucky-bar' style='height:100%;width:0%;background:linear-gradient(90deg,#faad14,#52c41a,#1890ff);transition:width 0.2s;position:absolute;left:0;top:0;'></div><div id='lucky-bar-text' style='position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#333;font-weight:bold;pointer-events:none;'>0%</div></div>`;
+        showTestResult('', null, html, () => { luckyTaskId = 0; });
+        // 2. 分批异步计算
+        let winAmounts = Array(1000).fill(0);
+        let group = 0, t = 0;
+        const totalGroups = 5, totalTimes = 100000;
+        const totalSteps = totalGroups * totalTimes;
+        let step = 0;
+        function processBatch() {
+          if (luckyTaskId !== thisTaskId) return;
+          let batch = 500; // 每批处理500次开奖
+          let processed = 0;
+          while (group < totalGroups && processed < batch) {
+            const lRed = randomBalls(cfg.red.max, cfg.red.count);
+            const lBlue = randomBalls(cfg.blue.max, cfg.blue.count);
+            for (let i = 0; i < 1000; i++) {
+              const r = checkPrize(luckyNumbers[i].red, luckyNumbers[i].blue, lRed, lBlue);
+              if (r && r.bonus) {
+                let bonus = 0;
+                if (r.bonus.includes('万')) {
+                  bonus = parseFloat(r.bonus) * 10000;
+                } else if (r.bonus.includes('元')) {
+                  bonus = parseFloat(r.bonus);
+                }
+                winAmounts[i] += bonus;
+              }
+            }
+            t++;
+            step++;
+            processed++;
+            if (t >= totalTimes) { t = 0; group++; }
+          }
+          // 更新进度条
+          const percent = Math.floor(step / totalSteps * 100);
+          const bar = document.getElementById('lucky-bar');
+          const barText = document.getElementById('lucky-bar-text');
+          const progText = document.getElementById('lucky-progress-text');
+          if (bar) bar.style.width = percent + '%';
+          if (barText) barText.textContent = percent + '%';
+          if (progText) progText.textContent = `正在计算幸运号码组：已完成 ${percent}%（${step}/${totalSteps}）`;
+          if (group < totalGroups) {
+            setTimeout(processBatch, 0);
+          } else if (luckyTaskId === thisTaskId) {
+            // 3. 找出中奖金额最高的前5个号码
+            let topIdx = winAmounts.map((amount, idx) => ({amount, idx}))
+              .sort((a,b)=>b.amount-a.amount)
+              .slice(0,5)
+              .map(x=>x.idx);
+            // 4. 展示
+            let html = `<div style='font-size:18px;font-weight:bold;margin-bottom:10px;'>幸运号码组（随机1000注，5×10万次开奖，奖金前5名）：</div>`;
+            topIdx.forEach((idx,rank) => {
+              const num = luckyNumbers[idx];
+              const amount = winAmounts[idx];
+              const redText = num.red.slice().sort((a,b)=>a-b).map(n => `<span style='color:#ffd700;font-weight:bold;font-size:15px;background:#fffbe6;padding:1px 4px;border-radius:5px;margin-right:1px;'>${n<10?'0'+n:n}</span>`).join(' ');
+              const blueText = num.blue.slice().sort((a,b)=>a-b).map(n => `<span style='color:#1890ff;font-weight:bold;font-size:15px;background:#e6f7ff;padding:1px 4px;border-radius:5px;margin-right:1px;'>${n<10?'0'+n:n}</span>`).join(' ');
+              html += `<div style='margin:4px 0 0 0;padding:5px 8px;border-radius:7px;background:linear-gradient(90deg,#faad14,#52c41a,#1890ff);color:#fff;box-shadow:0 1px 4px #0001;display:flex;align-items:center;min-height:28px;'>`;
+              html += `<span style='font-size:15px;font-weight:bold;margin-right:10px;color:#ffd700;'>NO.${rank+1}</span> <span style='font-size:15px;'>${redText} + ${blueText}</span> <span style='margin-left:auto;font-size:14px;'>中奖金额：${amount}元</span>`;
+              html += `</div>`;
+            });
+            // 更新弹窗内容
+            const contentDiv = document.getElementById('lucky-content');
+            if (contentDiv) contentDiv.innerHTML = html;
+          }
+        }
+        processBatch();
+      };
+      actions.appendChild(btnLucky);
+
+      // 周易出号
+      const btnYijing = document.createElement('button');
+      btnYijing.textContent = '周易出号';
+      btnYijing.style.background = 'linear-gradient(90deg,#722ed1,#1890ff)';
+      btnYijing.style.color = '#fff';
+      btnYijing.style.fontWeight = 'bold';
+      btnYijing.onclick = () => {
+        showYijingDialog();
+      };
+      actions.appendChild(btnYijing);
+
+      // 玄之又玄
+      const btnXuan = document.createElement('button');
+      btnXuan.textContent = '玄之又玄';
+      btnXuan.style.background = 'linear-gradient(90deg,#111,#444)';
+      btnXuan.style.color = '#fff';
+      btnXuan.style.fontWeight = 'bold';
+      btnXuan.onclick = () => {
+        showXuanDialog();
+      };
+      actions.appendChild(btnXuan);
+
+      // 碰撞出号
+      const btnCollision = document.createElement('button');
+      btnCollision.textContent = '碰撞出号';
+      btnCollision.style.background = 'linear-gradient(90deg,#fa541c,#faad14)';
+      btnCollision.style.color = '#fff';
+      btnCollision.style.fontWeight = 'bold';
+      btnCollision.onclick = () => {
+        btnCollision.disabled = true;
+        let collisionCount = 0;
+        const cfg = configs[mode];
+        const numMap = new Map();
+        const totalRounds = 100;
+        // 弹窗简介和进度条
+        let html = `<div style='font-size:18px;font-weight:bold;margin-bottom:10px;'>碰撞出号（100轮，每轮2万注，统计出现最多的号码）</div>`;
+        html += `<div style='font-size:15px;color:#888;margin-bottom:10px;'>本功能用于模拟大规模随机选号，统计在200万注中出现次数最多的号码。<br>碰撞完成后将展示出现最多的号码及其出现次数。</div>`;
+        html += `<div id='collision-progress-text' style='margin-bottom:4px;font-size:15px;color:#888;'>已完成 0%（0/100）</div>`;
+        html += `<div id='collision-progress' style='width:100%;height:18px;background:#eee;border-radius:8px;overflow:hidden;margin-bottom:16px;position:relative;'><div id='collision-bar' style='height:100%;width:0%;background:linear-gradient(90deg,#fa541c,#faad14);transition:width 0.2s;position:absolute;left:0;top:0;'></div><div id='collision-bar-text' style='position:absolute;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#333;font-weight:bold;pointer-events:none;'>0%</div></div>`;
+        html += `<div id='collision-result'></div>`;
+        showTestResult('', null, html);
+
+        function genNums() {
+          let arr = [];
+          for (let i = 0; i < 10000; i++) {
+            arr.push({
+              red: randomBalls(cfg.red.max, cfg.red.count),
+              blue: randomBalls(cfg.blue.max, cfg.blue.count)
+            });
+          }
+          return arr;
+        }
+        function numKey(num) {
+          return num.red.slice().sort((a,b)=>a-b).join(',') + '|' + num.blue.slice().sort((a,b)=>a-b).join(',');
+        }
+        function updateProgress() {
+          const percent = Math.floor(collisionCount / totalRounds * 100);
+          const bar = document.getElementById('collision-bar');
+          const barText = document.getElementById('collision-bar-text');
+          const progText = document.getElementById('collision-progress-text');
+          if (bar) bar.style.width = percent + '%';
+          if (barText) barText.textContent = percent + '%';
+          if (progText) progText.textContent = `已完成 ${percent}%（${collisionCount}/${totalRounds}）`;
+        }
+        function doCollision() {
+          collisionCount++;
+          const groupA = genNums();
+          const groupB = genNums();
+          [...groupA, ...groupB].forEach(num => {
+            const key = numKey(num);
+            numMap.set(key, (numMap.get(key) || 0) + 1);
+          });
+          updateProgress();
+          if (collisionCount < totalRounds) {
+            setTimeout(doCollision, 0);
+          } else {
+            // 统计出现最多的号码
+            let maxKey = '';
+            let maxCount = 0;
+            for (let [key, count] of numMap.entries()) {
+              if (count > maxCount) {
+                maxCount = count;
+                maxKey = key;
+              }
+            }
+            // 解析号码
+            const [redStr, blueStr] = maxKey.split('|');
+            const redArr = redStr.split(',').map(x=>parseInt(x));
+            const blueArr = blueStr.split(',').map(x=>parseInt(x));
+            let redHtml = redArr.map(n=>`<span style='color:#ff4d4f;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+            let blueHtml = blueArr.map(n=>`<span style='color:#1890ff;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+            let resultHtml = `<div style='font-size:18px;font-weight:bold;margin-bottom:10px;'>碰撞统计完成！</div>`;
+            resultHtml += `<div style='margin-bottom:8px;'><b>碰撞轮数：</b><span style='color:#2d8cf0;font-weight:bold;'>${totalRounds}</span></div>`;
+            resultHtml += `<div style='margin-bottom:8px;'><b>出现最多的号码：</b>${redHtml} + ${blueHtml}</div>`;
+            resultHtml += `<div style='margin-bottom:8px;'><b>出现次数：</b><span style='color:#fa541c;font-weight:bold;'>${maxCount}</span> 次</div>`;
+            const resultDiv = document.getElementById('collision-result');
+            if (resultDiv) resultDiv.innerHTML = resultHtml;
+            btnCollision.disabled = false;
+          }
+        }
+        doCollision();
+      };
+      actions.appendChild(btnCollision);
+
+      area.appendChild(actions);
+      // 开奖区（始终显示）
+      const openDiv = document.createElement('div');
+      openDiv.className = 'open-area';
+      openDiv.innerHTML = `<b>开奖号码：</b>`;
+      let lot = (lotteryNumbers && lotteryNumbers[0]) ? lotteryNumbers[0] : null;
+      const ballsDiv = document.createElement('div');
+      ballsDiv.className = 'lottery-balls';
+      if (lot) {
+        lot.red.slice().sort((a,b)=>a-b).forEach(n => {
+          const b = document.createElement('div');
+          b.className = 'ball gold-animate red';
+          b.textContent = n < 10 ? '0'+n : n;
+          ballsDiv.appendChild(b);
+        });
+        lot.blue.slice().sort((a,b)=>a-b).forEach(n => {
+          const b = document.createElement('div');
+          b.className = 'ball gold-animate blue';
+          b.textContent = n < 10 ? '0'+n : n;
+          ballsDiv.appendChild(b);
+        });
+      } else {
+        // 未开奖时显示空球或提示
+        for (let i = 0; i < cfg.red.count; i++) {
+          const b = document.createElement('div');
+          b.className = 'ball red';
+          b.textContent = '--';
+          ballsDiv.appendChild(b);
+        }
+        for (let i = 0; i < cfg.blue.count; i++) {
+          const b = document.createElement('div');
+          b.className = 'ball blue';
+          b.textContent = '--';
+          ballsDiv.appendChild(b);
+        }
+      }
+      openDiv.appendChild(ballsDiv);
+      area.appendChild(openDiv);
+
+      // 已选号码展示（含中奖结果）
+      if (userNumbers.length > 0) {
+        const multiDiv = document.createElement('div');
+        multiDiv.className = 'section';
+        multiDiv.innerHTML = '<b>已选号码：</b>';
+        userNumbers.forEach((num, idx) => {
+          const line = document.createElement('div');
+          line.className = 'number-line';
+          // 注号前缀，固定宽度
+          const idxSpan = document.createElement('span');
+          idxSpan.textContent = `第${idx+1}注：`;
+          idxSpan.style.display = 'inline-block';
+          idxSpan.style.minWidth = '60px';
+          line.appendChild(idxSpan);
+          // 手动标志
+          if (num.manual) {
+            const tag = document.createElement('span');
+            tag.textContent = '手动';
+            tag.style.background = '#faad14';
+            tag.style.color = '#fff';
+            tag.style.fontSize = '13px';
+            tag.style.borderRadius = '6px';
+            tag.style.padding = '2px 8px';
+            tag.style.marginRight = '8px';
+            tag.style.marginLeft = '2px';
+            tag.style.fontWeight = 'bold';
+            line.appendChild(tag);
+          }
+          // 只用文本显示号码，红区红字，蓝区蓝字
+          const redText = num.red.slice().sort((a,b)=>a-b).map(n => (n < 10 ? '0'+n : n)).join(' ');
+          const blueText = num.blue.slice().sort((a,b)=>a-b).map(n => (n < 10 ? '0'+n : n)).join(' ');
+          const textSpan = document.createElement('span');
+          textSpan.innerHTML = `<span style='color:#ff4d4f'>${redText}</span> + <span style='color:#1890ff'>${blueText}</span>`;
+          textSpan.style.marginRight = '12px';
+          textSpan.style.whiteSpace = 'nowrap';
+          line.appendChild(textSpan);
+          // 删除按钮
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '删除';
+          delBtn.style.marginLeft = '10px';
+          delBtn.style.background = '#f5222d';
+          delBtn.style.color = '#fff';
+          delBtn.style.border = 'none';
+          delBtn.style.borderRadius = '5px';
+          delBtn.style.fontSize = '13px';
+          delBtn.style.padding = '2px 10px';
+          delBtn.style.cursor = 'pointer';
+          delBtn.style.whiteSpace = 'nowrap';
+          delBtn.onclick = () => {
+            userNumbers.splice(idx, 1);
+            hasDrawed = false;
+            renderGame();
+          };
+          line.appendChild(delBtn);
+          // 中奖结果
+          let resultObj = results[idx];
+          const resultSpan = document.createElement('span');
+          resultSpan.innerHTML = `<b>中奖结果：</b> <span style='font-weight:bold;'>${resultObj ? (resultObj.name + (resultObj.bonus ? '（'+resultObj.bonus+'）' : '')) : ''}</span>`;
+          resultSpan.style.whiteSpace = 'nowrap';
+          line.appendChild(resultSpan);
+          // 样式处理
+          if (resultObj) {
+            if (resultObj.name === '未中奖') {
+              line.classList.add('losing');
+            } else {
+              line.classList.add('winning');
+            }
+          }
+          multiDiv.appendChild(line);
+        });
+        area.appendChild(multiDiv);
+      }
+
+      // 多注开奖结果（已合并到已选号码区，移除原结果区）
+    }
+
+    function randomBalls(max, count) {
+      const arr = Array.from({length: max}, (_,i)=>i+1);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr.slice(0, count).sort((a,b)=>a-b);
+    }
+
+    function checkPrize(userRed, userBlue, lotteryRed, lotteryBlue) {
+      const cfg = configs[mode];
+      const matchRed = userRed.filter(n => lotteryRed.includes(n)).length;
+      const matchBlue = userBlue.filter(n => lotteryBlue.includes(n)).length;
+      for (const p of cfg.prize) {
+        if (matchRed === p.matchRed && matchBlue === p.matchBlue) {
+          return p;
+        }
+      }
+      return { name: '未中奖', bonus: '' };
+    }
+
+    // 玩法切换
+    document.getElementById('mode-ssq').onclick = () => {
+      mode = 'ssq';
+      userRed = [];
+      userBlue = [];
+      result = null;
+      document.getElementById('mode-ssq').classList.add('active');
+      document.getElementById('mode-dlt').classList.remove('active');
+      renderGame();
+    };
+    document.getElementById('mode-dlt').onclick = () => {
+      mode = 'dlt';
+      userRed = [];
+      userBlue = [];
+      result = null;
+      document.getElementById('mode-dlt').classList.add('active');
+      document.getElementById('mode-ssq').classList.remove('active');
+      renderGame();
+    };
+
+    // 测试开奖弹窗
+    function showTestResult(msg, jackpotNumbers, highlight, onClose) {
+      // 移除已有弹窗
+      const old = document.getElementById('test-modal');
+      if (old) old.remove();
+      const modal = document.createElement('div');
+      modal.id = 'test-modal';
+      modal.style.position = 'fixed';
+      modal.style.left = '0';
+      modal.style.top = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.25)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '9999';
+      const box = document.createElement('div');
+      box.style.background = '#fff';
+      box.style.borderRadius = '12px';
+      box.style.padding = '28px 24px 18px 24px';
+      box.style.minWidth = '320px';
+      box.style.maxWidth = '90vw';
+      box.style.boxShadow = '0 4px 32px #0002';
+      box.style.fontSize = '17px';
+      box.style.lineHeight = '2';
+      // 内容区
+      const contentDiv = document.createElement('div');
+      contentDiv.id = 'lucky-content';
+      contentDiv.innerHTML = highlight;
+      if (jackpotNumbers) {
+        let redStr = jackpotNumbers.red.sort((a,b)=>a-b).map(n=>`<span style='color:#ff4d4f;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+        let blueStr = jackpotNumbers.blue.sort((a,b)=>a-b).map(n=>`<span style='color:#1890ff;font-weight:bold;'>${n<10?'0'+n:n}</span>`).join(' ');
+        const colorLine = `<div style='margin-top:8px;'><b>开奖号码：</b>${redStr} + ${blueStr}</div>`;
+        contentDiv.innerHTML += colorLine;
+      }
+      box.appendChild(contentDiv);
+      // 关闭按钮
+      const btn = document.createElement('button');
+      btn.textContent = '关闭';
+      btn.style.marginTop = '18px';
+      btn.style.padding = '6px 24px';
+      btn.style.background = '#2d8cf0';
+      btn.style.color = '#fff';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '6px';
+      btn.style.fontSize = '16px';
+      btn.style.cursor = 'pointer';
+      btn.onclick = () => {
+        if (onClose) onClose();
+        modal.remove();
+      };
+      box.appendChild(btn);
+      modal.appendChild(box);
+      document.body.appendChild(modal);
+    }
+
+    // 64卦表（简化版，卦辞和吉凶可补充完善）
+    const yijingHexagrams = [
+      {name:'乾', desc:'元亨利贞。', luck:'大吉', explain:'象征天，积极进取，万事顺利。'},
+      {name:'坤', desc:'含弘光大，品物咸亨。', luck:'大吉', explain:'象征地，包容万物，顺势而为。'},
+      {name:'屯', desc:'元亨，利贞，勿用有攸往，利建侯。', luck:'小吉', explain:'万事起头难，需耐心等待时机。'},
+      {name:'蒙', desc:'亨。匪我求童蒙，童蒙求我。', luck:'中平', explain:'启蒙阶段，宜虚心学习。'},
+      {name:'需', desc:'有孚，光亨，贞吉。', luck:'吉', explain:'等待时机，保持信心。'},
+      {name:'讼', desc:'有孚窒惕，中吉，终凶。', luck:'凶', explain:'有争执，宜和为贵，慎防口舌。'},
+      {name:'师', desc:'贞，丈人吉，无咎。', luck:'吉', explain:'有组织有纪律，依靠权威。'},
+      {name:'比', desc:'吉。原筮，元永贞，无咎。', luck:'吉', explain:'团结协作，互相帮助。'},
+      {name:'小畜', desc:'亨。密云不雨，自我西郊。', luck:'中平', explain:'积少成多，宜耐心积累。'},
+      {name:'履', desc:'履虎尾，不咥人，亨。', luck:'吉', explain:'小心行事，谨慎前进。'},
+      {name:'泰', desc:'小往大来，吉亨。', luck:'大吉', explain:'天地交泰，万事顺遂。'},
+      {name:'否', desc:'否之匪人，不利君子贞，大往小来。', luck:'凶', explain:'闭塞不通，宜守静待变。'},
+      {name:'同人', desc:'同人于野，亨。利涉大川，利君子贞。', luck:'吉', explain:'与人为善，合作共赢。'},
+      {name:'大有', desc:'元亨。', luck:'大吉', explain:'收获丰盛，财运亨通。'},
+      {name:'谦', desc:'亨，君子有终。', luck:'吉', explain:'谦虚谨慎，福泽自来。'},
+      {name:'豫', desc:'利建侯，行师。', luck:'吉', explain:'心情愉快，顺势而为。'},
+      {name:'随', desc:'元亨利贞，无咎。', luck:'吉', explain:'顺应变化，灵活应对。'},
+      {name:'蛊', desc:'元亨，利涉大川。先甲三日，后甲三日。', luck:'中平', explain:'改革创新，去旧迎新。'},
+      {name:'临', desc:'元亨利贞。至于八月有凶。', luck:'吉', explain:'居高临下，宜谦虚谨慎。'},
+      {name:'观', desc:'盥而不荐，有孚顒若。', luck:'中平', explain:'观察形势，静观其变。'},
+      {name:'噬嗑', desc:'亨。利用狱。', luck:'中平', explain:'解决障碍，宜果断处理。'},
+      {name:'贲', desc:'亨。小利有攸往。', luck:'吉', explain:'外表美好，内在需充实。'},
+      {name:'剥', desc:'不利有攸往。', luck:'凶', explain:'事物剥落，宜防损失。'},
+      {name:'复', desc:'亨。出入无疾，朋来无咎。', luck:'吉', explain:'失而复得，重获新生。'},
+      {name:'无妄', desc:'元亨利贞。其匪正有眚，不利有攸往。', luck:'凶', explain:'意外之事，宜守正道。'},
+      {name:'大畜', desc:'利贞。不家食吉。利涉大川。', luck:'吉', explain:'积蓄力量，等待时机。'},
+      {name:'颐', desc:'贞吉。观颐，自求口实。', luck:'吉', explain:'注重养生，饮食有节。'},
+      {name:'大过', desc:'栋桡，利有攸往，亨。', luck:'中平', explain:'压力较大，宜量力而行。'},
+      {name:'坎', desc:'习坎，有孚，维心亨，行有尚。', luck:'凶', explain:'多有阻碍，需谨慎前行。'},
+      {name:'离', desc:'利贞，亨。畜牝牛吉。', luck:'吉', explain:'光明正大，前途光明。'},
+      {name:'咸', desc:'亨，利贞。取女吉。', luck:'吉', explain:'感应良好，适合恋爱。'},
+      {name:'恒', desc:'亨，无咎，利贞，利有攸往。', luck:'吉', explain:'持之以恒，终获成功。'},
+      {name:'遁', desc:'亨，小利贞。', luck:'中平', explain:'退避三舍，暂避锋芒。'},
+      {name:'大壮', desc:'利贞。', luck:'吉', explain:'力量增强，积极进取。'},
+      {name:'晋', desc:'康侯用锡马蕃庶，昼日三接。', luck:'吉', explain:'步步高升，事业有成。'},
+      {name:'明夷', desc:'利艰贞。', luck:'凶', explain:'光明受损，宜自我保护。'},
+      {name:'家人', desc:'利女贞。', luck:'吉', explain:'家庭和睦，亲情为重。'},
+      {name:'睽', desc:'小事吉。', luck:'中平', explain:'分歧矛盾，求同存异。'},
+      {name:'蹇', desc:'利西南，不利东北。利见大人，贞吉。', luck:'中平', explain:'前路艰难，需寻求帮助。'},
+      {name:'解', desc:'利西南，无咎。', luck:'吉', explain:'困境解除，问题迎刃而解。'},
+      {name:'损', desc:'有孚，元吉，无咎，可贞，利有攸往。', luck:'吉', explain:'适当舍弃，反得大利。'},
+      {name:'益', desc:'利有攸往，利涉大川。', luck:'吉', explain:'有所收获，利于前行。'},
+      {name:'夬', desc:'扬于王庭，孚号有厉。', luck:'凶', explain:'果断决策，防范风险。'},
+      {name:'姤', desc:'女壮，勿用取女。', luck:'凶', explain:'偶遇突发，宜谨慎应对。'},
+      {name:'萃', desc:'亨，王假有庙，利见大人，利贞。', luck:'吉', explain:'众人聚集，合力成事。'},
+      {name:'升', desc:'元亨，用见大人，勿恤，南征吉。', luck:'吉', explain:'步步高升，宜把握机会。'},
+      {name:'困', desc:'亨，贞，大人吉，无咎，有言不信。', luck:'凶', explain:'处境困顿，需坚守信念。'},
+      {name:'井', desc:'改邑不改井，无丧无得。往来井井。', luck:'中平', explain:'基础稳固，宜守成。'},
+      {name:'革', desc:'己日乃孚。元亨利贞，悔亡。', luck:'吉', explain:'变革创新，去旧迎新。'},
+      {name:'鼎', desc:'元吉，亨。', luck:'吉', explain:'鼎新革故，事业有成。'},
+      {name:'震', desc:'亨，震来虩虩，笑言哑哑，震惊百里，不丧匕鬯。', luck:'吉', explain:'行动迅速，果断有为。'},
+      {name:'艮', desc:'艮其背，不获其身，行其庭，不见其人，无咎。', luck:'中平', explain:'止步观望，宜静不宜动。'},
+      {name:'渐', desc:'女归吉，利贞。', luck:'吉', explain:'循序渐进，水到渠成。'},
+      {name:'归妹', desc:'征凶，无攸利。', luck:'凶', explain:'婚姻之事，需谨慎对待。'},
+      {name:'丰', desc:'亨，王假之，勿忧，宜日中。', luck:'吉', explain:'收获丰富，宜珍惜当下。'},
+      {name:'旅', desc:'小亨，旅贞吉。', luck:'吉', explain:'外出旅行，注意安全。'},
+      {name:'巽', desc:'小亨，利有攸往，利见大人。', luck:'吉', explain:'谦逊有礼，利于进步。'},
+      {name:'兑', desc:'亨，利贞。', luck:'吉', explain:'和悦待人，口才出众。'},
+      {name:'涣', desc:'亨。王假有庙，利涉大川，利贞。', luck:'吉', explain:'分散聚合，顺势而为。'},
+      {name:'节', desc:'亨，苦节不可贞。', luck:'中平', explain:'节制有度，过犹不及。'},
+      {name:'中孚', desc:'豚鱼吉，利涉大川，利贞。', luck:'吉', explain:'诚信为本，吉祥如意。'},
+      {name:'小过', desc:'亨，利贞，可小事，不可大事。飞鸟遗之音，不宜上，宜下，大吉。', luck:'吉', explain:'小事可成，大事难就。'},
+      {name:'既济', desc:'亨小，利贞，初吉终乱。', luck:'中平', explain:'事情已成，慎防后变。'},
+      {name:'未济', desc:'亨，苦节不可贞。', luck:'凶', explain:'尚未完成，需再努力。'},
+    ];
+    function randomYijingLines() {
+      // 结合当前时间戳和随机生成六个爻（0=阴，1=阳），自下而上
+      const now = Date.now();
+      // 取毫秒的低6位作为部分爻
+      const ms = now & 0b111111;
+      let lines = [];
+      for (let i = 0; i < 6; i++) {
+        // 低三位用时间，后三位用随机
+        if (i < 3) {
+          lines.push((ms >> i) & 1);
+        } else {
+          lines.push(Math.random() > 0.5 ? 1 : 0);
+        }
+      }
+      return lines;
+    }
+    function linesToHexIndex(lines) {
+      // lines: [下, ..., 上]，转为二进制序号
+      return parseInt(lines.slice().reverse().join(''),2);
+    }
+    function yijingToNumbers(lines, redMax, redCount, blueMax, blueCount) {
+      // 用卦序号+爻分布映射号码
+      let base = linesToHexIndex(lines);
+      let reds = [];
+      for (let i = 0; i < redCount; i++) {
+        reds.push((base + i*3 + lines[i%6]*7) % redMax + 1);
+      }
+      let blues = [];
+      for (let i = 0; i < blueCount; i++) {
+        blues.push((base + i*7 + lines[(i+2)%6]*5) % blueMax + 1);
+      }
+      // 保证不重复
+      reds = Array.from(new Set(reds));
+      while (reds.length < redCount) {
+        let n = Math.floor(Math.random()*redMax)+1;
+        if (!reds.includes(n)) reds.push(n);
+      }
+      blues = Array.from(new Set(blues));
+      while (blues.length < blueCount) {
+        let n = Math.floor(Math.random()*blueMax)+1;
+        if (!blues.includes(n)) blues.push(n);
+      }
+      return {red: reds, blue: blues};
+    }
+    function showYijingDialog() {
+      const cfg = configs[mode];
+      let customInfo = window.YIJING_USER_INFO
+        ? { ...window.YIJING_USER_INFO }
+        : { name: '', birthday: '', lucky: '', blood: '' };
+      let lastInfo = { ...customInfo };
+
+      function getCustomSeed() {
+        let seed = Date.now();
+        if (customInfo.name) {
+          for (let c of customInfo.name) seed += c.charCodeAt(0);
+        }
+        if (customInfo.birthday) {
+          seed += new Date(customInfo.birthday).getTime();
+        }
+        if (customInfo.lucky) {
+          seed += parseInt(customInfo.lucky) || 0;
+        }
+        if (customInfo.blood) {
+          // 血型A=1,B=2,AB=3,O=4
+          const bloodMap = {A:1,B:2,AB:3,O:4};
+          seed += bloodMap[customInfo.blood] || 0;
+        }
+        return seed;
+      }
+
+      function randomYijingLinesCustom() {
+        // 用自定义seed影响六爻
+        let seed = getCustomSeed();
+        let lines = [];
+        for (let i = 0; i < 6; i++) {
+          seed = (seed * 9301 + 49297) % 233280;
+          lines.push((seed >> (i % 8)) & 1);
+        }
+        return lines;
+      }
+
+      function isInfoChanged() {
+        return customInfo.name !== lastInfo.name || customInfo.birthday !== lastInfo.birthday || customInfo.lucky !== lastInfo.lucky || customInfo.blood !== lastInfo.blood;
+      }
+
+      function getConstellation(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const m = d.getMonth() + 1, day = d.getDate();
+        // 标准星座日期区间
+        const arr = [
+          ['摩羯座', 1, 1, 1, 19],
+          ['水瓶座', 1, 20, 2, 18],
+          ['双鱼座', 2, 19, 3, 20],
+          ['白羊座', 3, 21, 4, 19],
+          ['金牛座', 4, 20, 5, 20],
+          ['双子座', 5, 21, 6, 21],
+          ['巨蟹座', 6, 22, 7, 22],
+          ['狮子座', 7, 23, 8, 22],
+          ['处女座', 8, 23, 9, 22],
+          ['天秤座', 9, 23, 10, 23],
+          ['天蝎座', 10, 24, 11, 22],
+          ['射手座', 11, 23, 12, 21],
+          ['摩羯座', 12, 22, 12, 31]
+        ];
+        for (let i = 0; i < arr.length; i++) {
+          const [name, sm, sd, em, ed] = arr[i];
+          if ((m === sm && day >= sd) || (m === em && day <= ed)) return name;
+        }
+        return '';
+      }
+      function getFavColor(lucky, blood) {
+        // 扩展为26色，含白色和黑色
+        if (!lucky && !blood) return '';
+        const colors = [
+          '#ff4d4f', '#faad14', '#52c41a', '#1890ff', '#722ed1', '#13c2c2', '#eb2f96', '#a0a0a0',
+          '#f5222d', '#fa541c', '#fa8c16', '#fae004', '#b7eb8f', '#36cfc9', '#40a9ff', '#597ef7',
+          '#9254de', '#f759ab', '#d3adf7', '#ff85c0', '#ffd666', '#ffc069', '#ffec3d', '#bae637',
+          '#000000', '#ffffff'
+        ];
+        const bloodMap = {A:1,B:2,AB:3,O:4};
+        let idx = (parseInt(lucky)||0) + (bloodMap[blood]||0);
+        return colors[idx % colors.length];
+      }
+      function getFavColorName(hex) {
+        // 26色名
+        if (!hex) return '';
+        const map = {
+          '#ff4d4f':'正红','#faad14':'琥珀','#52c41a':'翠绿','#1890ff':'天蓝','#722ed1':'紫罗兰','#13c2c2':'青绿',
+          '#eb2f96':'玫红','#a0a0a0':'中灰','#f5222d':'猩红','#fa541c':'橘红','#fa8c16':'橙黄','#fae004':'柠檬黄',
+          '#b7eb8f':'嫩绿','#36cfc9':'薄荷','#40a9ff':'湖蓝','#597ef7':'靛蓝','#9254de':'淡紫','#f759ab':'粉紫',
+          '#d3adf7':'薰衣草','#ff85c0':'樱花粉','#ffd666':'浅金','#ffc069':'杏黄','#ffec3d':'亮黄','#bae637':'苹果绿',
+          '#000000':'黑色','#ffffff':'白色'
+        };
+        return map[hex]||'彩色';
+      }
+      function getWorry(blood, constellation, lucky) {
+        // 丰富的顾虑库
+        const worries = [
+          '担心错过机会', '害怕运气不佳', '担心计划赶不上变化', '害怕被误解', '担心努力没有回报',
+          '害怕孤独', '担心健康问题', '担心财务压力', '担心人际关系', '担心未来不确定',
+          '担心无法坚持', '担心被忽视', '担心选择错误', '担心失去自由', '担心没有安全感',
+          '担心被比较', '担心拖延症', '担心表达不清', '担心没有动力', '担心被拒绝',
+          '担心目标太高难以实现', '担心家庭不和睦', '担心朋友疏远', '担心工作压力大', '担心事业停滞',
+          '担心学习跟不上', '担心技术落后', '担心被淘汰', '担心没有创新', '担心缺乏资源',
+          '担心身体发胖', '担心失眠多梦', '担心饮食不健康', '担心运动不足', '担心意外受伤',
+          '担心环境污染', '担心交通安全', '担心天气变化', '担心自然灾害', '担心疾病流行',
+          '担心亲人健康', '担心子女教育', '担心父母年老', '担心家庭经济', '担心住房问题',
+          '担心买不起房', '担心租房不稳定', '担心物价上涨', '担心收入减少', '担心投资失败',
+          '担心理财被骗', '担心债务缠身', '担心信用受损', '担心失业风险', '担心职业发展',
+          '担心升职无望', '担心同事关系', '担心领导不赏识', '担心工作无趣', '担心加班太多',
+          '担心假期太少', '担心休息不足', '担心生活单调', '担心缺乏激情', '担心兴趣丧失',
+          '担心没有朋友', '担心社交恐惧', '担心表达能力差', '担心沟通障碍', '担心被孤立',
+          '担心恋爱失败', '担心婚姻不幸福', '担心感情变淡', '担心被背叛', '担心分手痛苦',
+          '担心遇人不淑', '担心单身太久', '担心家庭暴力', '担心子女叛逆', '担心教育方式',
+          '担心孩子成绩', '担心孩子健康', '担心孩子交友', '担心孩子安全', '担心孩子未来',
+          '担心老无所依', '担心养老问题', '担心医疗费用', '担心退休生活', '担心社会保障',
+          '担心政策变化', '担心法律风险', '担心合同纠纷', '担心被诈骗', '担心网络安全',
+          '担心隐私泄露', '担心信息过载', '担心技术失控', '担心人工智能威胁', '担心世界和平'
+        ];
+        // 信息hash
+        let idx = 0;
+        if (blood) idx += {A:1, B:2, AB:3, O:4}[blood] * 3;
+        if (constellation) idx += constellation.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+        if (lucky) idx += parseInt(lucky) * 7;
+        if (!blood && !constellation && !lucky) {
+          // 信息全无，返回'暂无'
+          return '暂无';
+        } else {
+          idx = idx % worries.length;
+        }
+        return worries[idx];
+      }
+
+      function genResult() {
+        const now = new Date();
+        const lines = randomYijingLinesCustom();
+        const idx = linesToHexIndex(lines) % 64;
+        const hex = yijingHexagrams[idx];
+        const nums = yijingToNumbers(lines, cfg.red.max, cfg.red.count, cfg.blue.max, cfg.blue.count);
+        // 卦象图（横向紧凑）
+        let linesHtml = lines.slice().reverse().map(v =>
+          v
+            ? '<span style="font-size:22px;margin:0 2px;color:#1890ff;">⚊</span>'
+            : '<span style="font-size:22px;margin:0 2px;color:#888;">⚋</span>'
+        ).join('');
+        // 号码
+        let redHtml = nums.red.slice().sort((a,b)=>a-b).map(n=>`<span style='color:#ff4d4f;font-weight:bold;font-size:18px;'>${n<10?'0'+n:n}</span>`).join(' ');
+        let blueHtml = nums.blue.slice().sort((a,b)=>a-b).map(n=>`<span style='color:#1890ff;font-weight:bold;font-size:18px;'>${n<10?'0'+n:n}</span>`).join(' ');
+        // 时间字符串
+        let timeStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')} ` +
+                      `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}.${now.getMilliseconds().toString().padStart(3,'0')}`;
+        // 个人信息表单
+        let formHtml = `<div style='margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;'>`
+          + `<label>姓名：<input id='yijing-name' type='text' value='${customInfo.name||''}' style='width:80px;margin-right:8px;'></label>`
+          + `<label>生日：<input id='yijing-birthday' type='date' value='${customInfo.birthday||''}' style='margin-right:8px;'></label>`
+          + `<label>幸运数字：<input id='yijing-lucky' type='number' value='${customInfo.lucky||''}' style='width:60px;'></label>`
+          + `<label>血型：<select id='yijing-blood' style='width:60px;'><option value=''>--</option><option value='A'${customInfo.blood==='A'?' selected':''}>A</option><option value='B'${customInfo.blood==='B'?' selected':''}>B</option><option value='AB'${customInfo.blood==='AB'?' selected':''}>AB</option><option value='O'${customInfo.blood==='O'?' selected':''}>O</option></select></label>`
+          + `<button id='yijing-setinfo' style='margin-left:8px;background:${isInfoChanged() ? '#1890ff' : '#ccc'};color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:15px;cursor:${isInfoChanged() ? 'pointer' : 'not-allowed'};' ${isInfoChanged() ? '' : 'disabled'}>确定</button>`
+          + `</div>`;
+        // 头部信息
+        let headInfo = '';
+        let constellation = getConstellation(customInfo.birthday);
+        let favColorHex = getFavColor(customInfo.lucky, customInfo.blood);
+        let favColorName = getFavColorName(favColorHex);
+        let worry = getWorry(customInfo.blood, constellation, customInfo.lucky);
+        if (customInfo.name || constellation || favColorName || worry) {
+          headInfo = `<div style='font-size:15px;color:#888;margin-bottom:4px;'>` +
+            (customInfo.name ? `<span style='color:#2d8cf0;font-weight:bold;'>${customInfo.name}</span> ` : '') +
+            (constellation ? `| 星座：<span style='color:#faad14;'>${constellation}</span> ` : '') +
+            `| 喜欢的颜色：<span style='color:${favColorHex||'#aaa'};font-weight:bold;'>${favColorName||'暂无'}</span> ` +
+            `| 当前的顾虑：<span style='color:#eb2f96;'>${worry==='暂无'?'暂无':worry}</span>` +
+            `</div>`;
+        }
+        // 内容
+        let html = formHtml;
+        html += `<div style='font-size:18px;font-weight:bold;margin-bottom:8px;'>周易出号${customInfo.name ? ' - ' + customInfo.name : ''}</div>`;
+        html += headInfo;
+        html += `<div style='font-size:15px;color:#888;margin-bottom:6px;'>本次点击时间：<span style='color:#2d8cf0;font-weight:bold;'>${timeStr}</span></div>`;
+        html += `<div style='display:flex;gap:18px;align-items:center;margin-bottom:10px;'><div>${linesHtml}</div><div><div style='font-size:17px;font-weight:bold;'>${hex.name}卦<span style='font-size:14px;color:#888;font-weight:normal;'>（${hex.explain}）</span></div><div style='font-size:15px;color:#888;'>${hex.desc}</div><div style='font-size:15px;color:#faad14;font-weight:bold;'>吉凶：${hex.luck}</div></div></div>`;
+        html += `<div style='margin-bottom:10px;'><b>本卦选号：</b><span>${redHtml} + ${blueHtml}</span></div>`;
+        html += `<div style='font-size:14px;color:#888;margin-bottom:8px;'>仅供娱乐，祝君好运！（如需结合使用者命格之高阶应用请联系版权所有人）</div>`;
+        html += `<div style='text-align:right;'><button id='yijing-again' style='background:#722ed1;color:#fff;border:none;border-radius:6px;padding:6px 18px;font-size:15px;cursor:pointer;'>再摇一次</button></div>`;
+        return html;
+      }
+      function show() {
+        showTestResult('', null, genResult());
+        setTimeout(()=>{
+          // 个人信息表单事件
+          const nameInput = document.getElementById('yijing-name');
+          const birthdayInput = document.getElementById('yijing-birthday');
+          const luckyInput = document.getElementById('yijing-lucky');
+          const setBtn = document.getElementById('yijing-setinfo');
+          const bloodInput = document.getElementById('yijing-blood');
+          if (setBtn) setBtn.onclick = () => {
+            customInfo.name = nameInput.value.trim();
+            customInfo.birthday = birthdayInput.value;
+            customInfo.lucky = luckyInput.value.trim();
+            customInfo.blood = bloodInput.value;
+            lastInfo = { ...customInfo };
+            show();
+          };
+          // 输入变化时动态刷新按钮状态
+          [nameInput, birthdayInput, luckyInput, bloodInput].forEach(input => {
+            if (input) input.oninput = input.onchange = () => {
+              customInfo.name = nameInput.value.trim();
+              customInfo.birthday = birthdayInput.value;
+              customInfo.lucky = luckyInput.value.trim();
+              customInfo.blood = bloodInput.value;
+              // 只刷新表单部分
+              const btn = document.getElementById('yijing-setinfo');
+              if (btn) {
+                const changed = isInfoChanged();
+                btn.style.background = changed ? '#1890ff' : '#ccc';
+                btn.style.cursor = changed ? 'pointer' : 'not-allowed';
+                btn.disabled = !changed;
+              }
+            };
+          });
+          const againBtn = document.getElementById('yijing-again');
+          if (againBtn) againBtn.onclick = show;
+        }, 100);
+      }
+      show();
+    }
+
+    // MD5实现（简化版）
+    function md5cycle(x, k) {
+      let [a, b, c, d] = x;
+      function ff(a, b, c, d, x, s, t) {
+        a = (a + ((b & c) | (~b & d)) + x + t) | 0;
+        return (((a << s) | (a >>> (32 - s))) + b) | 0;
+      }
+      function gg(a, b, c, d, x, s, t) {
+        a = (a + ((b & d) | (c & ~d)) + x + t) | 0;
+        return (((a << s) | (a >>> (32 - s))) + b) | 0;
+      }
+      function hh(a, b, c, d, x, s, t) {
+        a = (a + (b ^ c ^ d) + x + t) | 0;
+        return (((a << s) | (a >>> (32 - s))) + b) | 0;
+      }
+      function ii(a, b, c, d, x, s, t) {
+        a = (a + (c ^ (b | ~d)) + x + t) | 0;
+        return (((a << s) | (a >>> (32 - s))) + b) | 0;
+      }
+      a = ff(a, b, c, d, k[0], 7, -680876936);
+      d = ff(d, a, b, c, k[1], 12, -389564586);
+      c = ff(c, d, a, b, k[2], 17, 606105819);
+      b = ff(b, c, d, a, k[3], 22, -1044525330);
+      a = ff(a, b, c, d, k[4], 7, -176418897);
+      d = ff(d, a, b, c, k[5], 12, 1200080426);
+      c = ff(c, d, a, b, k[6], 17, -1473231341);
+      b = ff(b, c, d, a, k[7], 22, -45705983);
+      a = ff(a, b, c, d, k[8], 7, 1770035416);
+      d = ff(d, a, b, c, k[9], 12, -1958414417);
+      c = ff(c, d, a, b, k[10], 17, -42063);
+      b = ff(b, c, d, a, k[11], 22, -1990404162);
+      a = ff(a, b, c, d, k[12], 7, 1804603682);
+      d = ff(d, a, b, c, k[13], 12, -40341101);
+      c = ff(c, d, a, b, k[14], 17, -1502002290);
+      b = ff(b, c, d, a, k[15], 22, 1236535329);
+      a = gg(a, b, c, d, k[1], 5, -165796510);
+      d = gg(d, a, b, c, k[6], 9, -1069501632);
+      c = gg(c, d, a, b, k[11], 14, 643717713);
+      b = gg(b, c, d, a, k[0], 20, -373897302);
+      a = gg(a, b, c, d, k[5], 5, -701558691);
+      d = gg(d, a, b, c, k[10], 9, 38016083);
+      c = gg(c, d, a, b, k[15], 14, -660478335);
+      b = gg(b, c, d, a, k[4], 20, -405537848);
+      a = gg(a, b, c, d, k[9], 5, 568446438);
+      d = gg(d, a, b, c, k[14], 9, -1019803690);
+      c = gg(c, d, a, b, k[3], 14, -187363961);
+      b = gg(b, c, d, a, k[8], 20, 1163531501);
+      a = gg(a, b, c, d, k[13], 5, -1444681467);
+      d = gg(d, a, b, c, k[2], 9, -51403784);
+      c = gg(c, d, a, b, k[7], 14, 1735328473);
+      b = gg(b, c, d, a, k[12], 20, -1926607734);
+      a = hh(a, b, c, d, k[5], 4, -378558);
+      d = hh(d, a, b, c, k[8], 11, -2022574463);
+      c = hh(c, d, a, b, k[11], 16, 1839030562);
+      b = hh(b, c, d, a, k[14], 23, -35309556);
+      a = hh(a, b, c, d, k[1], 4, -1530992060);
+      d = hh(d, a, b, c, k[4], 11, 1272893353);
+      c = hh(c, d, a, b, k[7], 16, -155497632);
+      b = hh(b, c, d, a, k[10], 23, -1094730640);
+      a = hh(a, b, c, d, k[13], 4, 681279174);
+      d = hh(d, a, b, c, k[0], 11, -358537222);
+      c = hh(c, d, a, b, k[3], 16, -722521979);
+      b = hh(b, c, d, a, k[6], 23, 76029189);
+      a = hh(a, b, c, d, k[9], 4, -640364487);
+      d = hh(d, a, b, c, k[12], 11, -421815835);
+      c = hh(c, d, a, b, k[15], 16, 530742520);
+      b = hh(b, c, d, a, k[2], 23, -995338651);
+      a = ii(a, b, c, d, k[0], 6, -198630844);
+      d = ii(d, a, b, c, k[7], 10, 1126891415);
+      c = ii(c, d, a, b, k[14], 15, -1416354905);
+      b = ii(b, c, d, a, k[5], 21, -57434055);
+      a = ii(a, b, c, d, k[12], 6, 1700485571);
+      d = ii(d, a, b, c, k[3], 10, -1894986606);
+      c = ii(c, d, a, b, k[10], 15, -1051523);
+      b = ii(b, c, d, a, k[1], 21, -2054922799);
+      a = ii(a, b, c, d, k[8], 6, 1873313359);
+      d = ii(d, a, b, c, k[15], 10, -30611744);
+      c = ii(c, d, a, b, k[6], 15, -1560198380);
+      b = ii(b, c, d, a, k[13], 21, 1309151649);
+      a = ii(a, b, c, d, k[4], 6, -145523070);
+      d = ii(d, a, b, c, k[11], 10, -1120210379);
+      c = ii(c, d, a, b, k[2], 15, 718787259);
+      b = ii(b, c, d, a, k[9], 21, -343485551);
+      x[0] = (a + x[0]) | 0;
+      x[1] = (b + x[1]) | 0;
+      x[2] = (c + x[2]) | 0;
+      x[3] = (d + x[3]) | 0;
+    }
+    function md5blk(s) {
+      let md5blks = [], i;
+      for (i = 0; i < 64; i += 4) {
+        md5blks[i >> 2] =
+          s.charCodeAt(i) +
+          (s.charCodeAt(i + 1) << 8) +
+          (s.charCodeAt(i + 2) << 16) +
+          (s.charCodeAt(i + 3) << 24);
+      }
+      return md5blks;
+    }
+    function md51(s) {
+      let n = s.length,
+        state = [1732584193, -271733879, -1732584194, 271733878],
+        i;
+      for (i = 64; i <= n; i += 64) {
+        md5cycle(state, md5blk(s.substring(i - 64, i)));
+      }
+      s = s.substring(i - 64);
+      let tail = Array(16).fill(0);
+      for (i = 0; i < s.length; i++) tail[i >> 2] |= s.charCodeAt(i) << ((i % 4) << 3);
+      tail[i >> 2] |= 0x80 << ((i % 4) << 3);
+      if (i > 55) {
+        md5cycle(state, tail);
+        tail = Array(16).fill(0);
+      }
+      tail[14] = n * 8;
+      md5cycle(state, tail);
+      return state;
+    }
+    function rhex(n) {
+      let s = '', j = 0;
+      for (; j < 4; j++) s += ((n >> (j * 8 + 4)) & 0x0f).toString(16) + ((n >> (j * 8)) & 0x0f).toString(16);
+      return s;
+    }
+    function md5(s) {
+      return md51(s).map(rhex).join('');
+    }
+    // 种子随机数生成器（mulberry32）
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0;
+        seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    // 玄之又玄弹窗
+    function showXuanDialog() {
+      const cfg = configs[mode];
+      let wish = '';
+      function genNumbers(seedStr, count) {
+        // 用MD5前8位转为整数做种子
+        const md5str = md5(seedStr);
+        let seed = parseInt(md5str.slice(0, 8), 16);
+        let rand = mulberry32(seed);
+        let numbers = [];
+        for (let i = 0; i < count; i++) {
+          // 每组用不同seed（MD5+序号）
+          let subSeed = parseInt(md5(md5str + '_' + i).slice(0, 8), 16);
+          let subRand = mulberry32(subSeed);
+          // 红球
+          let reds = [];
+          let arr = Array.from({length: cfg.red.max}, (_,i)=>i+1);
+          for (let j = arr.length - 1; j > 0; j--) {
+            const k = Math.floor(subRand() * (j + 1));
+            [arr[j], arr[k]] = [arr[k], arr[j]];
+          }
+          reds = arr.slice(0, cfg.red.count).sort((a,b)=>a-b);
+          // 蓝球
+          let blues = [];
+          let arrb = Array.from({length: cfg.blue.max}, (_,i)=>i+1);
+          for (let j = arrb.length - 1; j > 0; j--) {
+            const k = Math.floor(subRand() * (j + 1));
+            [arrb[j], arrb[k]] = [arrb[k], arrb[j]];
+          }
+          blues = arrb.slice(0, cfg.blue.count).sort((a,b)=>a-b);
+          numbers.push({red: reds, blue: blues});
+        }
+        return numbers;
+      }
+      function render() {
+        let html = `<div style='font-size:18px;font-weight:bold;margin-bottom:10px;color:#fff;'>玄之又玄</div>`;
+        html += `<div style='font-size:15px;color:#bbb;margin-bottom:10px;'>输入你的心愿，系统将用神秘算法（MD5+椭圆曲线加密）为你生成5组可能中奖号码。<br>同一心愿每次结果相同，换心愿再试试！</div>`;
+        html += `<div style='margin-bottom:12px;'><input id='xuan-wish' type='text' value='${wish||''}' placeholder='请输入你的心愿...' style='width:80%;padding:6px 10px;border-radius:6px;border:1px solid #444;font-size:16px;background:#222;color:#fff;'></div>`;
+        html += `<div style='text-align:right;margin-bottom:10px;'><button id='xuan-gen' style='background:#111;color:#fff;border:none;border-radius:6px;padding:6px 18px;font-size:15px;cursor:pointer;'>生成号码</button></div>`;
+        if (wish) {
+          const nums = genNumbers(wish, 5);
+          html += `<div style='margin-top:6px;'>`;
+          nums.forEach((num, idx) => {
+            let redHtml = num.red.map(n=>`<span style='color:#ffd700;font-weight:bold;font-size:15px;background:#222;padding:1px 4px;border-radius:5px;margin-right:1px;'>${n<10?'0'+n:n}</span>`).join(' ');
+            let blueHtml = num.blue.map(n=>`<span style='color:#00eaff;font-weight:bold;font-size:15px;background:#222;padding:1px 4px;border-radius:5px;margin-right:1px;'>${n<10?'0'+n:n}</span>`).join(' ');
+            html += `<div style='margin:4px 0 0 0;padding:5px 8px;border-radius:7px;background:linear-gradient(90deg,#111,#333);color:#fff;box-shadow:0 1px 4px #0004;display:flex;align-items:center;min-height:28px;'>`;
+            html += `<span style='font-size:15px;font-weight:bold;margin-right:10px;color:#ffd700;'>NO.${idx+1}</span> <span style='font-size:15px;'>${redHtml} + ${blueHtml}</span>`;
+            html += `</div>`;
+          });
+          html += `</div>`;
+        }
+        html += `<div style='font-size:13px;color:#888;margin-top:10px;'>仅供娱乐，祝君心想事成！</div>`;
+        html += `<div style='text-align:right;'><button id='xuan-close' style='background:#444;color:#fff;border:none;border-radius:6px;padding:6px 18px;font-size:15px;cursor:pointer;margin-top:10px;'>关闭</button></div>`;
+        // 弹窗
+        const old = document.getElementById('test-modal');
+        if (old) old.remove();
+        const modal = document.createElement('div');
+        modal.id = 'test-modal';
+        modal.style.position = 'fixed';
+        modal.style.left = '0';
+        modal.style.top = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.7)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+        const box = document.createElement('div');
+        box.style.background = '#111';
+        box.style.borderRadius = '12px';
+        box.style.padding = '18px 10px 12px 10px';
+        box.style.minWidth = '260px';
+        box.style.maxWidth = '90vw';
+        box.style.boxShadow = '0 2px 12px #0008';
+        box.style.fontSize = '15px';
+        box.style.lineHeight = '1.7';
+        box.innerHTML = html;
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+        setTimeout(()=>{
+          document.getElementById('xuan-gen').onclick = () => {
+            wish = document.getElementById('xuan-wish').value.trim();
+            render();
+          };
+          document.getElementById('xuan-wish').onkeydown = e => {
+            if (e.key === 'Enter') {
+              wish = document.getElementById('xuan-wish').value.trim();
+              render();
+            }
+          };
+          document.getElementById('xuan-close').onclick = () => {
+            modal.remove();
+          };
+        }, 100);
+      }
+      render();
+    }
+
+    renderGame();
+
+    window.YIJING_USER_INFO = {
+      name: '顾金',
+      birthday: '1981-11-06',
+      lucky: '23',
+      blood: 'A'
+    };
+  </script>
+</body>
+</html> 
