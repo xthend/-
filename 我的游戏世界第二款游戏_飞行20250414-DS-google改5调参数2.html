@@ -1,0 +1,2507 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>星际战机 MK4: 平滑过渡 + 僚机 (中文注释版)</title> <!-- Title Updated -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <style>
+    /* --- Base & Reset --- */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(145deg, #0a081f, #1a183d, #0f0f24); font-family: 'Press Start 2P', cursive; overflow: hidden; color: white; touch-action: none; }
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    /* --- Game Container --- */
+    #game-container { position: relative; box-shadow: 0 0 45px rgba(0, 200, 255, 0.7); border: 3px solid rgba(100, 220, 255, 0.5); overflow: hidden; width: 100vw; height: 100vh; background: #02010a; cursor: none; }
+
+    /* --- HUD Elements --- */
+    .hud-element { position: absolute; padding: 10px 14px; border: none; border-radius: 5px; text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 12px rgba(0, 200, 255, 0.5); z-index: 100; font-size: clamp(11px, 1.6vw, 13px); min-height: 30px; display: flex; align-items: center; background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0)); }
+    #score-display { top: 10px; left: 10px; color: #00e0ff; }
+    #gold-count { top: 10px; right: 10px; color: #ffee70; }
+    #level-display { top: 48px; right: 10px; color: #afff80; }
+    #lives-display { top: 86px; right: 10px; color: #ff8080; }
+
+    /* --- Health Bar --- */
+    #health-container { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: clamp(180px, 38vw, 250px); height: clamp(18px, 3.5vh, 24px); background: rgba(10, 20, 40, 0.7); border: 2px solid rgba(100, 220, 255, 0.4); border-radius: 12px; overflow: hidden; z-index: 100; display: flex; align-items: center; padding: 2px; }
+    #health-label { position: absolute; left: 8px; font-size: clamp(9px, 1.3vw, 11px); color: rgba(255, 255, 255, 0.7); text-shadow: 0 0 3px #000; z-index: 102; }
+    #health-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #ff4d4d, #ff8a4f, #f8e050); transition: width 0.3s ease-out; position: relative; overflow: hidden; border-radius: 10px; z-index: 101; }
+    #health-bar::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.0) 100%); background-size: 200% 100%; animation: shine 1.8s infinite linear; }
+    @keyframes shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* --- Powerup Display --- */
+    #powerup-display { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 100; }
+    .powerup-icon { width: clamp(30px, 6vw, 38px); height: clamp(30px, 6vw, 38px); background: rgba(10, 20, 40, 0.8); border: 2px solid rgba(100, 220, 255, 0.5); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(12px, 2.5vw, 15px); color: #c0ffff; transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; box-shadow: 0 0 8px rgba(100, 220, 255, 0.3); text-shadow: 0 0 5px currentColor; }
+    .powerup-icon:hover { transform: scale(1.15); box-shadow: 0 0 15px rgba(100, 220, 255, 0.7); }
+    .powerup-icon.active { border-color: #ffffff; box-shadow: 0 0 18px rgba(255, 255, 255, 0.8); animation: pulse-active 1s infinite alternate ease-in-out; }
+    @keyframes pulse-active { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.1); opacity: 1; } }
+
+    /* --- Boss Warning --- */
+    #boss-warning { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #ff3333; font-size: clamp(22px, 5vw, 30px); text-align: center; z-index: 150; background: rgba(30, 0, 0, 0.85); padding: 30px 40px; border-radius: 15px; border: 3px solid #ff3333; box-shadow: 0 0 30px rgba(255, 51, 51, 0.7); display: none; animation: bossPulse 0.6s infinite alternate ease-in-out; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 0 0 10px #ff3333; }
+    @keyframes bossPulse { from { opacity: 0.85; transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 30px rgba(255, 51, 51, 0.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 40px rgba(255, 51, 51, 0.9); } }
+
+    /* --- Game Over Screen --- */
+    #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 0, 0, 0.92); padding: 40px 50px; border-radius: 15px; text-align: center; z-index: 200; display: none; flex-direction: column; align-items: center; border: 3px solid #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.8); width: 85%; max-width: 480px; }
+    #game-over h1 { color: #ff4444; font-size: clamp(24px, 6vw, 34px); margin-bottom: 30px; text-shadow: 0 0 15px #ff4444; animation: textGlowRed 1.5s infinite alternate; }
+    #game-over p { color: #f0f0f0; margin-bottom: 35px; font-size: clamp(16px, 3.5vw, 18px); }
+    #restart-btn { background: linear-gradient(135deg, #ff4444, #ff6a00); border: none; color: white; padding: 15px 30px; font-family: 'Press Start 2P', cursive; font-size: clamp(14px, 3.5vw, 16px); border-radius: 8px; cursor: pointer; transition: all 0.2s ease-out; text-transform: uppercase; letter-spacing: 1.8px; box-shadow: 0 5px 0 #a02020; margin-top: 15px; text-shadow: 1px 1px 2px #440000; }
+    #restart-btn:hover { transform: scale(1.08) translateY(-3px); box-shadow: 0 8px 20px rgba(255, 68, 68, 0.9); }
+    #restart-btn:active { transform: scale(1.04) translateY(1px); box-shadow: 0 4px 10px rgba(255, 68, 68, 0.7); }
+
+    /* --- Start Screen --- */
+    #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 3, 15, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 300; color: white; text-align: center; padding: 20px; }
+    #start-screen h1 { font-size: clamp(28px, 7vw, 44px); color: #61dafb; margin-bottom: 40px; text-shadow: 0 0 20px #61dafb; animation: textGlowBlue 1.8s infinite alternate; }
+    #start-screen p { font-size: clamp(16px, 3.5vw, 18px); margin-bottom: 50px; max-width: 90%; line-height: 1.8; color: #ddd; }
+    #start-btn { background: linear-gradient(135deg, #00e0ff, #3affa7); border: none; color: #02010a; padding: 18px 36px; font-family: 'Press Start 2P', cursive; font-size: clamp(16px, 4vw, 19px); border-radius: 8px; cursor: pointer; transition: all 0.2s ease-out; text-transform: uppercase; z-index: 310; position: relative; box-shadow: 0 5px 0 #2a8a70; letter-spacing: 1.2px; text-shadow: 1px 1px 1px rgba(255,255,255,0.2); }
+    #start-btn:hover { transform: scale(1.08) translateY(-3px); box-shadow: 0 8px 25px rgba(0, 224, 255, 0.8); }
+    #start-btn:active { transform: scale(1.04) translateY(1px); box-shadow: 0 4px 10px rgba(0, 224, 255, 0.6); }
+    .controls-info { margin-top: 50px; font-size: clamp(12px, 3vw, 14px); color: #ccc; }
+    .controls-info p { margin: 7px 0; }
+
+    /* Text Glow Animations */
+    @keyframes textGlowBlue { from { text-shadow: 0 0 15px #61dafb, 0 0 20px #61dafb; } to { text-shadow: 0 0 25px #80f0ff, 0 0 35px #00e0ff; } }
+    @keyframes textGlowRed { from { text-shadow: 0 0 12px #ff4444, 0 0 18px #ff4444; } to { text-shadow: 0 0 20px #ff6666, 0 0 30px #ff2222; } }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="score-display" class="hud-element">分数: 0</div>
+    <div id="gold-count" class="hud-element">金币: 0</div>
+    <div id="level-display" class="hud-element">武器: 1级</div>
+    <div id="lives-display" class="hud-element">生命: 5</div>
+    <div id="health-container">
+      <span id="health-label">HP</span>
+      <div id="health-bar"></div>
+    </div>
+    <div id="powerup-display"></div>
+    <div id="boss-warning">警告: Boss 来袭！</div>
+    <div id="game-over" style="display: none;">
+      <h1>任务失败</h1>
+      <p>最终分数: <span id="final-score">0</span></p>
+      <button id="restart-btn">再次尝试</button>
+    </div>
+    <div id="start-screen">
+      <h1>星际战机 MK4</h1>
+      <p>高位悬停，精确打击！<br>升级火力，僚机支援，肃清威胁，守护星空！</p>
+      <button id="start-btn">进入战场</button>
+      <div class="controls-info">
+        <p>触摸/鼠标 - 控制战机移动 (自动悬停)</p>
+        <p>火力 - 自动</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 游戏配置 (包含平衡性调整和僚机设置) ---
+    const config = {
+      width: window.innerWidth,          // 游戏画布宽度 (撑满窗口)
+      height: window.innerHeight,         // 游戏画布高度 (撑满窗口)
+      playerSize: 32,                   // 玩家飞船大小
+      playerSpeed: 8,                   // 玩家移动速度 (影响 lerp 平滑度)
+      baseHealth: 300,                  // 玩家基础生命值
+      bulletSpeed: 10,                  // 玩家子弹基础速度
+      enemySpawnRate: 18,               // 敌人生成基础间隔 (帧数, 越小越快)
+      maxEnemies: 25,                   // 最大敌人数量基础值
+      goldPerEnemyBase: 2,              // 敌人掉落金币基础值
+      maxBullets: 4500,                  // 屏幕上玩家子弹最大数量 (为僚机略微增加)
+      maxParticles: 800,                // 屏幕上粒子效果最大数量
+      powerupDuration: 900,             // Powerup 持续时间 (帧数, 60fps下约15秒)
+      bossSpawnInterval: 120,           // 生成 Boss 需要击杀的敌人数量
+      bossSpawnCooldown: 720,           // Boss 生成后的冷却时间 (帧数, 避免连续生成)
+      maxWeaponLevel: 2000,             // 武器最高等级
+      enemyHoverYMin: 0.15,             // 敌人悬停区域最小 Y 轴比例
+      enemyHoverYMax: 0.45,             // 敌人悬停区域最大 Y 轴比例
+      enemyDescentSpeed: 0.7,           // 敌人下降速度
+      playerVerticalOffset: 50,         // 玩家 Y 轴相对于触摸/鼠标位置的偏移量 (悬停效果)
+      // --- 平衡性参数 (回调调整) ---
+      playerDamageMultiplier: 3,        // 玩家伤害乘数 (调低, 之前是 0.5, 现在是 3)
+      goldDropMultiplier: 0.5,          // 金币掉落乘数 (保持降低)
+      goldPerLevel: 130,                // 每级所需金币 (稍微降低, 加快升级)
+      damageScalingDivisor: 14,         // 伤害增长分母 (越小伤害随等级增长越快)
+      // --- 新增: 武器过渡平滑 ---
+      transitionLevelRange: 15,         // 武器等级阈值前后 +/- 15 级进行混合开火
+      // --- 新增: 僚机配置 ---
+      wingmenUnlockLevel: 1,          // 僚机解锁等级
+      wingmanDamageFactor: 0.4,         // 僚机伤害系数 (相对于玩家追踪激光的基础伤害)
+    };
+
+    // --- 游戏状态变量 ---
+    let player;                         // 玩家对象
+    let bullets = [];                   // 玩家子弹数组
+    let enemies = [];                   // 敌人数组
+    let goldCoins = [];                 // 金币数组
+    let particles = [];                 // 粒子效果数组
+    let enemyBullets = [];              // 敌人子弹数组
+    let powerups = [];                  // 掉落的 Powerup 道具数组
+    let activePowerups = {};            // 玩家当前激活的 Powerup 效果及其剩余时间
+    let explosions = [];                // 爆炸效果数组
+    let stars = [];                     // 背景星星数组
+    let orbitingAuras = [];             // 环绕光环数组 (武器类型)
+    let wingmen = [];                   // 僚机数组 (新增)
+    let isBeamActive = false;           // 光束武器是否激活
+    let beamTargetX = 0, beamTargetY = 0; // 光束武器目标坐标
+    let beamHitCooldowns = {};          // 光束武器对每个敌人的命中冷却 (防止单帧多次伤害)
+    const BEAM_DAMAGE_INTERVAL = 5;     // 光束武器伤害计算间隔 (帧数)
+    let score = 0, gold = 0, weaponLevel = 1; // 分数, 金币, 武器等级
+    let playerHealth = config.baseHealth, maxHealth = config.baseHealth; // 玩家当前/最大生命值
+    let playerLives = 5;                // 玩家剩余生命数
+    let enemyKills = 0, bossCount = 0;  // 击杀敌人数量, 击杀 Boss 数量
+    let burnTimer = 0, freezeTimer = 0, shieldTimer = 0, laserBeamTimer = 0; // 燃烧/冰冻/护盾/激光效果计时器
+    let gameStarted = false, isMobile = false; // 游戏是否开始, 是否为移动设备
+    let lastBossSpawnTime = -config.bossSpawnCooldown; // 上次 Boss 生成时间 (用于冷却)
+    let touchPos = { x: null, y: null, active: false, id: null }; // 触摸控制状态
+
+    // --- 颜色调色板 ---
+    const colors = {
+        player: '#61dafb', bullet: '#ffda63', homingLaser: '#00ffff', launchedAura: '#98ff98',
+        orbitingAura: '#ff40ff', beamLaser: '#ff9933', gold: '#ffda63', enemyBullet: '#ff7b7b',
+        boss: '#e000e0', fire: '#ff6a00', shield: '#98ff98', freeze: '#4ecdc4', health: '#ff7b7b',
+        star: '#ffffff', enemy_interceptor: '#ff5555', enemy_cruiser: '#bb66ff',
+        enemy_drone: '#40ff80', enemy_sniper: '#00ccff',
+    };
+
+    // --- 敌人和 Powerup 定义 ---
+    // 敌人类型定义数组: 类型, 颜色, 绘制函数名, 大小, 速度, 生命, 伤害, 射击模式, 射速, 价值(分数/金币基础)
+    const enemyTypes = [
+        { type: 'interceptor', color: colors.enemy_interceptor, drawFunc: 'drawInterceptor', size: 26, speed: 1.5, health: 4, damage: 6, shootPattern: 'burst', shootRate: 130, value: 12 },
+        { type: 'cruiser', color: colors.enemy_cruiser, drawFunc: 'drawCruiser', size: 34, speed: 0.8, health: 8, damage: 10, shootPattern: 'spread_slow', shootRate: 180, value: 20 },
+        { type: 'drone', color: colors.enemy_drone, drawFunc: 'drawDrone', size: 22, speed: 2.0, health: 3, damage: 5, shootPattern: 'sine_wave', shootRate: 110, value: 10 },
+        { type: 'sniper', color: colors.enemy_sniper, drawFunc: 'drawSniper', size: 24, speed: 1.0, health: 5, damage: 7, shootPattern: 'fast_snipe', shootRate: 160, value: 15 },
+        { type: 'heavy_drone', color: '#ffaa00', drawFunc: 'drawDrone', size: 28, speed: 1.2, health: 6, damage: 8, shootPattern: 'homing', shootRate: 200, value: 18 },
+        { type: 'elite_interceptor', color: '#ff00aa', drawFunc: 'drawInterceptor', size: 30, speed: 1.8, health: 7, damage: 9, shootPattern: 'double_burst', shootRate: 140, value: 25 },
+        { type: 'old_plane', color: '#4ecdc4', drawFunc: 'drawInterceptor', size: 24, speed: 1.4, health: 3, damage: 5, shootPattern: 'single', shootRate: 120, value: 10 },
+        { type: 'old_tank', color: '#5555ff', drawFunc: 'drawCruiser', size: 32, speed: 0.7, health: 7, damage: 9, shootPattern: 'spread_slow', shootRate: 170, value: 18 },
+    ];
+    // Powerup 类型定义数组: 类型, 颜色, 出现几率, 大小, 显示符号
+    const powerupTypes = [
+        { type: 'health', color: colors.health, chance: 0.20, size: 20, symbol: '+' },
+        { type: 'shield', color: colors.shield, chance: 0.25, size: 20, symbol: 'S' },
+        { type: 'freeze', color: colors.freeze, chance: 0.15, size: 20, symbol: 'F' },
+        { type: 'gold',   color: colors.gold,   chance: 0.30, size: 20, symbol: 'G' },
+        { type: '1up',    color: '#00ff00',     chance: 0.10, size: 20, symbol: '1' },
+        { type: 'laser_beam', color: colors.beamLaser, chance: 0.05, size: 22, symbol: 'L' } // 新增激光 Powerup
+    ];
+
+    // --- P5.js Setup 函数 ---
+    function setup() {
+        // 检测是否为移动设备
+        isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // 创建画布并附加到 #game-container div
+        let canvas = createCanvas(config.width, config.height).parent('game-container');
+        // 设置像素密度为 1 (优化性能)
+        pixelDensity(1);
+        // 设置文本字体
+        textFont('Press Start 2P');
+        // 初始化玩家对象
+        player = {
+            x: config.width / 2,                    // 初始 X 坐标
+            y: config.height - 100,                 // 初始 Y 坐标
+            size: config.playerSize,                // 玩家大小
+            targetX: config.width / 2,              // 目标 X 坐标 (用于平滑移动)
+            targetY: config.height - 100 - config.playerVerticalOffset, // 目标 Y 坐标 (包含悬停偏移)
+            invincible: false,                      // 是否无敌
+            invincibleTimer: 0                      // 无敌计时器
+        };
+        // 初始化背景星星
+        stars = [];
+        for (let i = 0; i < 200; i++) {
+            stars.push({
+                x: random(width),
+                y: random(height),
+                size: random(1, 3.5),
+                speed: random(0.5, 2.0),
+                alpha: random(120, 240)
+            });
+        }
+        // 添加触摸事件监听器 (阻止默认行为)
+        canvas.elt.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.elt.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.elt.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.elt.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+        // 设置开始屏幕
+        setupStartScreen();
+        // 初始化 UI 显示
+        updateUI();
+        updateHealthBar();
+        // 初始时暂停 P5 draw 循环
+        noLoop();
+        // 游戏一开始就创建僚机
+        createWingmen();
+    }
+
+    // --- 触摸事件处理 ---
+    // 处理触摸开始
+    function handleTouchStart(e) {
+        e.preventDefault(); // 阻止页面滚动等默认行为
+        if (!gameStarted) return; // 游戏未开始则忽略
+        // 如果没有手指在控制，记录第一个触摸点
+        if (touchPos.id === null) {
+            const touch = e.changedTouches[0];
+            touchPos.id = touch.identifier; // 记录触摸 ID
+            touchPos.x = touch.clientX;     // 记录触摸 X
+            touchPos.y = touch.clientY;     // 记录触摸 Y
+            player.targetX = touchPos.x;    // 设置玩家目标 X
+            player.targetY = touchPos.y - config.playerVerticalOffset; // 设置玩家目标 Y (带悬停)
+            touchPos.active = true;         // 标记触摸激活
+        }
+    }
+    // 处理触摸移动
+    function handleTouchMove(e) {
+        e.preventDefault();
+        if (!gameStarted || !touchPos.active) return; // 游戏未开始或无激活触摸则忽略
+        // 查找与记录的 ID 匹配的触摸点
+        for (let i=0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touchPos.id) {
+                touchPos.x = e.changedTouches[i].clientX; // 更新触摸 X
+                touchPos.y = e.changedTouches[i].clientY; // 更新触摸 Y
+                player.targetX = touchPos.x;            // 更新玩家目标 X
+                player.targetY = touchPos.y - config.playerVerticalOffset; // 更新玩家目标 Y
+                break;
+            }
+        }
+    }
+    // 处理触摸结束/取消
+    function handleTouchEnd(e) {
+        e.preventDefault();
+        // 查找结束的触摸点是否是控制点
+        for (let i=0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touchPos.id) {
+                touchPos.active = false; // 标记触摸结束
+                touchPos.id = null;      // 清除触摸 ID
+                break;
+            }
+        }
+    }
+
+    // --- 主 P5.js 绘制循环 ---
+    function draw() {
+        if (!gameStarted) return; // 游戏未开始则不执行
+
+        try {
+            // 清除画布
+            clear();
+            // 绘制背景
+            drawStarBackground();
+
+            // 更新和绘制游戏元素 (注意绘制顺序影响层叠)
+            updateWingmen();            // 更新僚机位置和开火状态
+            drawWingmen();              // 绘制僚机 (在玩家之前)
+            updatePlayer();             // 更新玩家位置和绘制玩家
+
+            updateBullets();            // 更新玩家子弹
+            updateOrbitingAuras();      // 更新环绕光环
+            updateBeamLaser();          // 更新光束武器
+
+            updateEnemies();            // 更新敌人 (移动, 绘制, 射击, 碰撞检测)
+            updateGoldCoins();          // 更新金币 (移动, 收集)
+            updateEnemyBullets();       // 更新敌人子弹 (移动, 绘制, 碰撞检测)
+
+            updateParticles();          // 更新粒子效果
+            updatePowerups();           // 更新掉落的 Powerup (移动, 绘制, 收集)
+            updateExplosions();         // 更新爆炸效果
+
+            drawOrbitingAuras();        // 绘制环绕光环
+            drawBeamLaser();            // 绘制光束武器
+
+            // 生成新的游戏元素
+            spawnEnemies();             // 生成敌人
+            spawnPowerups();            // 生成 Powerup
+
+            // 玩家开火逻辑
+            let fireInterval = max(2, 10 - floor(weaponLevel / 4)); // 根据武器等级计算开火间隔
+            if (frameCount % fireInterval === 0) {
+                fireProjectiles();      // 玩家主武器开火
+            }
+
+            // 检查和更新游戏状态
+            checkWeaponLevel();         // 检查并更新武器等级
+            updateActivePowerups();     // 更新激活的 Powerup 持续时间
+            updatePlayerInvincibility(); // 更新玩家无敌状态
+            updateBurnEffect();         // 更新燃烧效果
+
+            // 定期更新 UI (减少 DOM 操作频率)
+            if (frameCount % 10 === 0) {
+                updateUI();
+            }
+
+        } catch (error) {
+            // 捕获并打印绘制循环中的错误
+            console.error("!!! 游戏错误 (draw 循环):", error, error.stack);
+        }
+    }
+
+    // --- 背景绘制 ---
+    function drawStarBackground() {
+        background(2, 1, 10); // 深蓝色背景
+        noStroke(); // 无描边
+        for (let star of stars) {
+            // 根据时间和 Y 坐标给星星添加闪烁效果
+            fill(255, 255, 255, star.alpha * (0.7 + abs(sin(frameCount * 0.018 + star.y * 0.06)) * 0.3));
+            ellipse(star.x, star.y, star.size * 0.8); // 绘制星星
+            star.y += star.speed; // 星星向下移动
+            // 如果星星移出屏幕底部，则重置到顶部随机位置
+            if (star.y > height) {
+                star.y = -star.size;
+                star.x = random(width);
+            }
+        }
+    }
+
+    // --- 玩家更新与绘制 ---
+    function updatePlayer() {
+        // 非移动设备且无触摸输入时，使用鼠标控制
+        if (!isMobile && !touchPos.active) {
+            player.targetX = mouseX;
+            player.targetY = mouseY - config.playerVerticalOffset; // 应用悬停偏移
+        }
+        // 使用 lerp 实现平滑移动
+        player.x = lerp(player.x, player.targetX, 0.18);
+        player.y = lerp(player.y, player.targetY, 0.18);
+        // 限制玩家在画布范围内
+        player.x = constrain(player.x, player.size / 2, width - player.size / 2);
+        player.y = constrain(player.y, player.size / 2, height - player.size / 2);
+
+        // 绘制玩家飞船
+        push(); // 保存当前绘图状态
+        translate(player.x, player.y); // 移动坐标系原点到玩家位置
+        noStroke(); // 无描边
+
+        // 无敌状态闪烁效果
+        let isVisible = !(player.invincible && frameCount % 10 < 5);
+        if (isVisible) {
+            // 如果护盾激活，绘制护盾效果
+            if (shieldTimer > 0) {
+                fill(180, 255, 220, 120 + sin(frameCount * 0.25) * 40); // 护盾颜色和闪烁
+                ellipse(0, 0, player.size * 1.5); // 绘制护盾圆圈
+            }
+            // 绘制飞船主体 (多边形)
+            fill(colors.player); // 玩家主色
+            beginShape();
+            vertex(0, -player.size * 0.6);
+            vertex(player.size * 0.4, player.size * 0.3);
+            vertex(player.size * 0.2, player.size * 0.4);
+            vertex(0, player.size * 0.2);
+            vertex(-player.size * 0.2, player.size * 0.4);
+            vertex(-player.size * 0.4, player.size * 0.3);
+            endShape(CLOSE);
+            // 绘制驾驶舱
+            fill(80, 180, 220);
+            ellipse(0, -player.size * 0.2, player.size * 0.3, player.size * 0.4);
+            // 绘制机翼细节
+            fill(120, 255, 255, 180);
+            triangle(-player.size * 0.15, -player.size * 0.1, -player.size * 0.3, player.size * 0.1, -player.size * 0.15, player.size * 0.05);
+            triangle(player.size * 0.15, -player.size * 0.1, player.size * 0.3, player.size * 0.1, player.size * 0.15, player.size * 0.05);
+            // 绘制引擎火焰
+            let engineGlow = 180 + sin(frameCount * 0.35) * 60; // 火焰亮度变化
+            fill(255, engineGlow, 50, 220); // 火焰颜色
+            beginShape();
+            vertex(-player.size * 0.1, player.size * 0.2);
+            vertex(0, player.size * 0.55);
+            vertex(player.size * 0.1, player.size * 0.2);
+            endShape(CLOSE);
+        }
+        pop(); // 恢复之前保存的绘图状态
+    }
+    // 更新玩家无敌计时器
+    function updatePlayerInvincibility() {
+        if (player.invincible) {
+            player.invincibleTimer--;
+            if (player.invincibleTimer <= 0) {
+                player.invincible = false; // 无敌时间到
+            }
+        }
+    }
+
+    // --- 僚机逻辑 (新增) ---
+    // 创建僚机
+    function createWingmen() {
+        // 创建两个僚机，定义相对于玩家的偏移量和大小
+        wingmen = [
+            { relativeX: -45, relativeY: 15, size: 16, x: 0, y: 0 }, // 左僚机
+            { relativeX: 45,  relativeY: 15, size: 16, x: 0, y: 0 }  // 右僚机
+        ];
+        // 计算初始绝对位置 (相对于玩家)
+        for (let wingman of wingmen) {
+            wingman.x = player.x + wingman.relativeX;
+            wingman.y = player.y + wingman.relativeY;
+        }
+    }
+
+    // 更新僚机状态
+    function updateWingmen() {
+        if (wingmen.length === 0) return; // 没有僚机则跳过
+
+        if (followWingmanPath && wingmanPath.length > 0) {
+            // 如果跟随路径模式开启且路径不为空
+            // 设置第一个僚机的位置到当前路径点
+            let currentPathPoint = wingmanPath[wingmanPathIndex];
+            wingmen[0].x = currentPathPoint.x;
+            wingmen[0].y = currentPathPoint.y;
+
+            // 更新路径索引，循环播放
+            wingmanPathIndex = (wingmanPathIndex + 1) % wingmanPath.length;
+
+            // 第二个僚机的位置相对于第一个僚机保持相对偏移
+            if (wingmen.length > 1) {
+                wingmen[1].x = wingmen[0].x + wingmen[1].relativeX;
+                wingmen[1].y = wingmen[0].y + wingmen[1].relativeY;
+            }
+        } else {
+            // 原始的僚机跟随玩家的逻辑
+            for (let wingman of wingmen) {
+                let targetX = player.x + wingman.relativeX; // 目标 X
+                let targetY = player.y + wingman.relativeY; // 目标 Y
+                // 使用 lerp 实现平滑跟随 (比玩家稍快，保持紧密队形)
+                wingman.x = lerp(wingman.x, targetX, 0.22);
+                wingman.y = lerp(wingman.y, targetY, 0.22);
+            }
+        }
+
+        // 僚机开火逻辑 (每 2 帧开火一次 ≈ 30发/秒 @ 60fps)
+        if (frameCount % 2 === 0) {
+            fireWingmenProjectiles();
+        }
+    }
+
+    // 绘制僚机
+    function drawWingmen() {
+        if (wingmen.length === 0) return; // 没有僚机则跳过
+
+        // console.log("绘制僚机: 数量 = " + wingmen.length + ", 第一个僚机X: " + wingmen[0].x + ", Y: " + wingmen[0].y);
+
+        for (let wingman of wingmen) {
+            push(); // 保存绘图状态
+            translate(wingman.x, wingman.y); // 移动坐标系到僚机位置
+            noStroke(); // 无描边
+
+            // 使用比玩家稍暗的颜色
+            let wingmanColor = lerpColor(color(colors.player), color(0), 0.2);
+            fill(wingmanColor);
+
+            // 绘制菱形外观
+            let sz = wingman.size;
+            beginShape();
+            vertex(0, -sz * 0.7);       // 顶点
+            vertex(sz * 0.55, 0);       // 右侧点 (更宽)
+            vertex(0, sz * 0.7);       // 底点
+            vertex(-sz * 0.55, 0);      // 左侧点 (更宽)
+            endShape(CLOSE);
+
+            // 添加细节/驾驶舱 (更亮)
+            fill(lerpColor(color(colors.player), color(255), 0.5));
+            ellipse(0, -sz * 0.1, sz * 0.25, sz * 0.35);
+
+            pop(); // 恢复绘图状态
+        }
+    }
+
+    // 僚机发射子弹
+    function fireWingmenProjectiles() {
+        // 确保僚机存在且已解锁
+        if (wingmen.length === 0 || weaponLevel < config.wingmenUnlockLevel) return;
+
+        let currentLevel = min(weaponLevel, config.maxWeaponLevel);
+        // 使用与玩家相同的伤害乘数计算方式
+        let dmgMultiplier = 1 + floor(currentLevel / config.damageScalingDivisor);
+        let globalDamageNerf = config.playerDamageMultiplier; // 应用相同的全局伤害调整
+
+        // 计算僚机特定伤害
+        // 基础伤害类似玩家的追踪激光 (3), 并应用僚机伤害系数
+        let wingmanBaseDamage = 3;
+        let calculatedDamage = (wingmanBaseDamage * dmgMultiplier * config.wingmanDamageFactor) * globalDamageNerf;
+
+        let target = findNearestEnemy(); // 为所有僚机找到同一个最近目标
+
+        for (let wingman of wingmen) {
+             if (bullets.length >= config.maxBullets) break; // 每个僚机检查子弹上限
+             // 创建追踪激光子弹，从僚机位置发射
+             bullets.push({
+                 x: wingman.x,
+                 y: wingman.y - wingman.size * 0.5, // 从僚机中心稍上方发射
+                 vx: random(-0.5, 0.5),             // 初始轻微随机水平速度
+                 vy: -config.bulletSpeed * 0.7,     // 初始向上速度倾向
+                 size: { w: 3, h: 10 },             // 比玩家主追踪激光略小
+                 damage: calculatedDamage,          // 计算出的伤害
+                 isHoming: true,                    // 是追踪子弹
+                 target: target,                    // 追踪目标
+                 color: color(colors.homingLaser),  // 使用追踪激光颜色
+                 // 使用类似玩家Tier2的追踪参数，可微调
+                 turnRate: 0.13 + (currentLevel - config.wingmenUnlockLevel) * 0.0013, // 转向速率随等级提升
+                 acceleration: 0.32,                // 加速度
+                 type: 'homing_laser',               // 子弹类型标记
+                 piercing: true,                      // 添加穿透属性
+                 life: 300                            // 设置僚机子弹生命周期为 5 秒 (300帧)
+             });
+        }
+
+        // 确保添加僚机子弹后不超过总数限制
+        while (bullets.length > config.maxBullets) {
+            bullets.shift(); // 移除最早的子弹
+        }
+    }
+    // --- END 僚机逻辑 ---
+
+    // --- 玩家武器开火与子弹创建 (包含过渡逻辑) ---
+    function fireProjectiles() { createBullets(); } // 玩家开火入口
+    function createBullets() {
+        let currentLevel = min(weaponLevel, config.maxWeaponLevel); // 当前有效武器等级
+        let dmgMultiplier = 1 + floor(currentLevel / config.damageScalingDivisor); // 伤害乘数
+        let globalDamageNerf = config.playerDamageMultiplier; // 全局伤害调整
+        let transitionRange = config.transitionLevelRange; // 过渡区间范围
+
+        // --- 子弹生成辅助函数 ---
+        // 生成散射子弹
+        function spawnSpread(countModifier = 1.0, damageModifier = 1.0) {
+             if (bullets.length >= config.maxBullets) return; // 检查子弹上限
+            let bulletCount = 1 + floor((currentLevel - 1) / 4); // 基础数量随等级增加
+            bulletCount = min(7, bulletCount); // 限制最大数量
+            bulletCount = max(1, floor(bulletCount * countModifier)); // 应用数量修正
+            let spreadAngle = PI / 120; // 基础散射角度
+            let bulletColor = lerpColor(color(colors.bullet), color('#ffec80'), min(1, currentLevel / 100)); // 子弹颜色渐变
+            for (let i = 0; i < bulletCount; i++) {
+                 if (bullets.length >= config.maxBullets) break; // 循环内再次检查
+                 let angle = (i - (bulletCount - 1) / 2) * spreadAngle * (0.5 + (bulletCount / 14)); // 计算每个子弹的角度
+                 let vx = sin(angle) * config.bulletSpeed; // X 速度分量
+                 let vy = -cos(angle) * config.bulletSpeed; // Y 速度分量
+                 bullets.push({ x: player.x, y: player.y - player.size * 0.5, vx: vx, vy: vy, size: 6, damage: (1 * dmgMultiplier * damageModifier) * globalDamageNerf, isHoming: false, color: bulletColor, type: 'spread', life: 300 });
+            }
+        }
+        // 生成追踪激光
+        function spawnHoming(countModifier = 1.0, damageModifier = 1.0, fireRateModifier = 1.0) {
+             if (bullets.length >= config.maxBullets) return;
+            let laserCount = 1 + floor((currentLevel - 101) / 10); // 数量随 Tier 2 等级增加
+            laserCount = min(5, laserCount); // 限制最大数量
+            laserCount = max(1, floor(laserCount * countModifier)); // 应用数量修正
+            let homingFireInterval = max(8, 20 - floor((currentLevel - 101) / 10)); // 开火间隔随等级缩短
+            homingFireInterval = max(1, floor(homingFireInterval / fireRateModifier)); // 应用频率修正
+            if (frameCount % homingFireInterval === 0) { // 按计算的间隔开火
+                 let target = findNearestEnemy(); // 寻找目标
+                 for (let i = 0; i < laserCount; i++) {
+                     if (bullets.length >= config.maxBullets) break;
+                     let offsetX = (i - (laserCount - 1) / 2) * (player.size * 0.3); // 计算偏移，使多发激光并排
+                     bullets.push({ x: player.x + offsetX, y: player.y - player.size * 0.5, vx: random(-1, 1), vy: -config.bulletSpeed * 0.9, size: { w: 4, h: 14 }, damage: (3 * dmgMultiplier * damageModifier) * globalDamageNerf, isHoming: true, piercing: true, life: 300, target: target, color: color(colors.homingLaser), turnRate: 0.15 + (currentLevel - 101) * 0.0015, acceleration: 0.35, type: 'homing_laser' });
+                 }
+            }
+        }
+        // 生成发射式光环
+        function spawnLaunchedAura(countModifier = 1.0, damageModifier = 1.0, fireRateModifier = 1.0) {
+             if (bullets.length >= config.maxBullets) return;
+            let auraCount = 1 + floor((currentLevel - 301) / 20); // 数量随 Tier 3 等级增加
+            auraCount = min(3, auraCount); // 限制最大数量
+            auraCount = max(1, floor(auraCount * countModifier)); // 应用数量修正
+            let auraFireInterval = max(10, 25 - auraCount * 4); // 开火间隔随数量缩短
+            auraFireInterval = max(1, floor(auraFireInterval / fireRateModifier)); // 应用频率修正
+            if (frameCount % auraFireInterval === 0) { // 按计算的间隔开火
+                for(let i=0; i<auraCount; i++) {
+                     if (bullets.length >= config.maxBullets) break;
+                     let offsetX = (i - (auraCount-1)/2) * (player.size * 0.5); // 计算偏移
+                     bullets.push({ x: player.x + offsetX, y: player.y - player.size * 0.3, vx: 0, vy: -config.bulletSpeed * 0.6, size: 30 + (currentLevel - 301) * 0.15, damage: (3.5 * dmgMultiplier * damageModifier) * globalDamageNerf, piercing: true, color: color(colors.launchedAura), rotationSpeed: 0.08, angle: 0, type: 'launched_aura', life: 300 });
+                }
+            }
+        }
+
+        // 定义武器等级阶段
+        const TIER2_START = 101; const TIER3_START = 301; const TIER4_START = 601; const TIER5_START = 1001;
+
+        // --- 根据武器等级和过渡逻辑决定生成哪些子弹 ---
+        // Tier 1 (散射) + 过渡到 Tier 2
+        if (currentLevel < TIER2_START + transitionRange) {
+            let spreadDmgMod = 1.0; // 默认伤害系数
+            // 如果在过渡区，降低散射伤害
+            if (currentLevel >= TIER2_START - transitionRange) {
+                spreadDmgMod = map(currentLevel, TIER2_START - transitionRange, TIER2_START + transitionRange, 1.0, 0.2);
+            }
+            // 在 Tier 3 开始前都可能发射散射 (即使在过渡期)
+            if (currentLevel <= TIER3_START) {
+                spawnSpread(1.0, spreadDmgMod);
+            }
+        }
+        // Tier 2 (追踪) + 过渡到 Tier 3
+        if (currentLevel >= TIER2_START - transitionRange && currentLevel < TIER3_START + transitionRange) {
+            let homingDmgMod = 1.0; let homingFireRateMod = 1.0; // 默认伤害和频率系数
+            // 在过渡区开始时，增加追踪伤害和频率
+            if (currentLevel < TIER2_START + transitionRange) {
+                homingDmgMod = map(currentLevel, TIER2_START - transitionRange, TIER2_START + transitionRange, 0.2, 1.0);
+                homingFireRateMod = map(currentLevel, TIER2_START - transitionRange, TIER2_START + transitionRange, 0.5, 1.0);
+            }
+            // 在过渡区结束时，降低追踪伤害
+            if (currentLevel >= TIER3_START - transitionRange) {
+                homingDmgMod = map(currentLevel, TIER3_START - transitionRange, TIER3_START + transitionRange, 1.0, 0.2);
+            }
+            // 在 Tier 4 开始前都可能发射追踪
+            if (currentLevel <= TIER4_START) {
+                spawnHoming(1.0, homingDmgMod, homingFireRateMod);
+            }
+        }
+        // Tier 3 (发射光环) + 过渡到 Tier 4
+        if (currentLevel >= TIER3_START - transitionRange && currentLevel < TIER4_START + transitionRange) {
+            let auraDmgMod = 1.0; let auraFireRateMod = 1.0; // 默认伤害和频率系数
+            // 在过渡区开始时，增加光环伤害和频率
+            if (currentLevel < TIER3_START + transitionRange) {
+                auraDmgMod = map(currentLevel, TIER3_START - transitionRange, TIER3_START + transitionRange, 0.2, 1.0);
+                auraFireRateMod = map(currentLevel, TIER3_START - transitionRange, TIER3_START + transitionRange, 0.5, 1.0);
+            }
+            // 在过渡区结束时，降低光环伤害
+            if (currentLevel >= TIER4_START - transitionRange) {
+                auraDmgMod = map(currentLevel, TIER4_START - transitionRange, TIER4_START + transitionRange, 1.0, 0.2);
+            }
+            // 在 Tier 5 开始前都可能发射光环
+            if (currentLevel <= TIER5_START) {
+                spawnLaunchedAura(1.0, auraDmgMod, auraFireRateMod);
+            }
+        }
+        // Tier 4 (环绕光环) 状态更新 + 过渡
+        if (currentLevel >= TIER4_START - transitionRange && currentLevel < TIER5_START + transitionRange) {
+            let orbitingDmgMod = 1.0; // 默认伤害系数
+            // 在过渡区开始时，增加环绕光环伤害
+            if (currentLevel < TIER4_START + transitionRange) {
+                orbitingDmgMod = map(currentLevel, TIER4_START - transitionRange, TIER4_START + transitionRange, 0.1, 1.0);
+            }
+            // 更新环绕光环的状态 (数量, 伤害等)
+            updateOrbitingAuraState(currentLevel, dmgMultiplier, globalDamageNerf * orbitingDmgMod);
+        } else if (orbitingAuras.length > 0 && currentLevel < TIER4_START - transitionRange) {
+            // 如果等级掉出 Tier 4 区域，移除环绕光环
+            orbitingAuras = [];
+        }
+        // Tier 5 (光束) 状态更新 + 过渡
+        // 移除旧的激光激活逻辑，现在由 Powerup 控制
+
+        // 确保玩家发射后子弹总数不超过限制
+        while (bullets.length > config.maxBullets) {
+            bullets.shift();
+        }
+    }
+
+
+    // --- 子弹更新、绘制与碰撞检测 ---
+    function updateBullets() {
+        // 从后往前遍历，方便删除
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            let removed = false; // 标记子弹是否在本轮被移除
+
+            // 如果子弹有生命值属性，减少生命
+            if (b.life !== undefined) {
+                b.life--;
+            }
+
+            // --- 根据子弹类型更新位置 ---
+            if (b.type === 'homing_laser') { // 追踪激光
+                // 如果子弹仍在追踪模式
+                if (b.isHoming) {
+                    // 如果目标丢失或死亡，尝试寻找新目标
+                    if (!b.target || b.target.health <= 0) {
+                        b.target = findNearestEnemy(); // 寻找最近的敌人
+                        if (!b.target) { // 如果仍然没有目标，则停止追踪行为
+                            b.isHoming = false; // 标记为非追踪模式
+                            // 强制子弹向上飞行，以便快速离开屏幕
+                            b.vx = 0;
+                            b.vy = -config.bulletSpeed * 1.5;
+                        }
+                    }
+                }
+
+                // 只有在追踪模式且有目标时才执行加速和转向逻辑
+                if (b.isHoming && b.target) {
+                    // 加速逻辑
+                    let currentSpeed = sqrt(b.vx * b.vx + b.vy * b.vy);
+                    let maxSpeed = config.bulletSpeed * 1.4; // 最大速度
+                    if (currentSpeed < maxSpeed) {
+                        let accel = b.acceleration || 0.1;
+                        let normX = b.vx / (currentSpeed + 0.1); // 防止除以 0
+                        let normY = b.vy / (currentSpeed + 0.1);
+                        b.vx += normX * accel;
+                        b.vy += normY * accel;
+                    }
+                    // 目标更新与转向逻辑
+                    let targetAngle = atan2(b.target.y - b.y, b.target.x - b.x); // 计算目标角度
+                    let currentAngle = atan2(b.vy, b.vx); // 计算当前角度
+                    let angleDiff = targetAngle - currentAngle; // 计算角度差
+                    // 将角度差约束在 -PI 到 PI 之间
+                    while (angleDiff > PI) angleDiff -= TWO_PI;
+                    while (angleDiff < -PI) angleDiff += TWO_PI;
+                    // 根据转向速率限制角度变化
+                    let turn = constrain(angleDiff, -b.turnRate, b.turnRate);
+                    let newAngle = currentAngle + turn; // 计算新角度
+                    currentSpeed = sqrt(b.vx*b.vx + b.vy*b.vy); // 保持当前速度
+                    // 更新速度分量
+                    b.vx = cos(newAngle) * currentSpeed;
+                    b.vy = sin(newAngle) * currentSpeed;
+                }
+                // 更新位置 (无论是否追踪，子弹都会移动)
+                b.x += b.vx;
+                b.y += b.vy;
+            } else if (b.type === 'launched_aura') { // 发射式光环
+                b.x += b.vx || 0;
+                b.y += b.vy || 0;
+                b.angle += b.rotationSpeed || 0; // 更新旋转角度
+            } else { // 其他类型子弹 (如散射)
+                b.x += b.vx || 0;
+                b.y += b.vy || 0;
+            }
+
+            // --- 绘制子弹 ---
+            push();
+            if (b.type === 'homing_laser') { // 绘制追踪激光
+                translate(b.x, b.y);
+                rotate(atan2(b.vy, b.vx) + HALF_PI); // 旋转使其朝向移动方向
+                noStroke();
+                fill(b.color); // 激光主色
+                rect(-b.size.w / 2, -b.size.h / 2, b.size.w, b.size.h); // 绘制主体
+                fill(255, 255, 255, 200); // 绘制高光/核心
+                rect(-b.size.w / 4, -b.size.h / 2, b.size.w / 2, b.size.h * 0.8);
+            } else if (b.type === 'launched_aura') { // 绘制发射式光环
+                translate(b.x, b.y);
+                rotate(b.angle); // 应用旋转
+                noFill(); // 无填充
+                stroke(b.color); // 光环颜色
+                strokeWeight(max(1, b.size * 0.1)); // 线条粗细
+                ellipse(0, 0, b.size); // 绘制外环
+                strokeWeight(1); // 细线条
+                stroke(red(b.color), green(b.color), blue(b.color), 100); // 内环颜色 (半透明)
+                ellipse(0, 0, b.size * 0.6); // 绘制内环
+            } else { // 绘制普通圆形子弹 (如散射)
+                fill(b.color);
+                noStroke();
+                drawingContext.shadowBlur = 5; // 添加模糊阴影 (发光效果)
+                drawingContext.shadowColor = b.color.toString();
+                ellipse(b.x, b.y, b.size, b.size * 1.2); // 绘制椭圆子弹
+                drawingContext.shadowBlur = 0; // 关闭阴影
+            }
+            pop();
+
+            // --- 碰撞检测与移除 ---
+            // 先检查是否因碰撞移除 (只对非穿透子弹有效)
+            removed = checkProjectileCollision(b, i);
+
+            // 如果子弹未因碰撞移除，且移出屏幕范围 或 生命周期结束，则移除
+            let sizeCheck = b.size?.h || b.size?.w || b.size || 0; // 获取有效尺寸用于边界检查
+            if (!removed && (b.y < -sizeCheck || b.y > height + sizeCheck || b.x < -sizeCheck || b.x > width + sizeCheck || (b.life !== undefined && b.life <= 0))) {
+                bullets.splice(i, 1);
+            }
+        }
+        return false; // 子弹未与任何敌人碰撞或未被移除
+    }
+    // 检查单个子弹与所有敌人的碰撞
+    function checkProjectileCollision(bullet, bulletIndex) {
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            let enemy = enemies[j];
+            // 确保敌人对象存在
+            if (!enemy) continue;
+            // 计算碰撞距离阈值
+            let collisionDist = (bullet.size?.w || bullet.size) / 2 + enemy.size / 2;
+            // 检查距离
+            if (dist(bullet.x, bullet.y, enemy.x, enemy.y) < collisionDist) {
+                enemy.health -= bullet.damage; // 敌人扣血
+                createHitEffect(enemy.x, enemy.y, enemy.color); // 创建命中粒子效果
+                if (enemy.health <= 0) { // 如果敌人死亡
+                    handleEnemyDeath(enemy, j); // 处理敌人死亡逻辑
+                    // 注意: handleEnemyDeath 会从 enemies 数组中移除敌人，
+                    // 但后续的子弹仍然需要检查剩余的敌人，所以这里不需要 break 或 continue
+                }
+                // 如果子弹不是穿透性的，则移除子弹
+                if (!bullet.piercing) {
+                    bullets.splice(bulletIndex, 1);
+                    return true; // 返回 true 表示子弹已被移除
+                }
+            }
+        }
+        return false; // 子弹未与任何敌人碰撞或未被移除
+    }
+
+
+    // --- 环绕光环逻辑 ---
+    // 更新环绕光环的状态 (数量, 属性)
+    function updateOrbitingAuraState(currentLevel, dmgMultiplier, effectiveGlobalDamageNerf) {
+        const TIER4_START = 601; // Tier 4 起始等级
+        // 计算目标光环数量
+        let auraCountTarget = 1 + floor((currentLevel - TIER4_START) / 15);
+        auraCountTarget = min(6, auraCountTarget); // 限制最大数量
+        auraCountTarget = max(1, auraCountTarget); // 至少 1 个
+        // 如果当前数量少于目标，添加新的光环
+        while (orbitingAuras.length < auraCountTarget) {
+            orbitingAuras.push({
+                angle: random(TWO_PI), // 初始随机角度
+                radius: player.size * 1.5 + orbitingAuras.length * 10, // 半径随数量增加
+                speed: 0.05 + (currentLevel - TIER4_START) * 0.00015, // 速度随等级增加
+                size: 18 + (currentLevel - TIER4_START) * 0.1, // 大小随等级增加
+                damage: (0.5 * dmgMultiplier) * effectiveGlobalDamageNerf, // 伤害计算
+                color: color(colors.orbitingAura), // 颜色
+                enemiesHitThisFrame: {} // 记录本帧已击中的敌人 (防止单帧多次伤害)
+            });
+        }
+        // 如果当前数量多于目标，移除多余的光环
+        while (orbitingAuras.length > auraCountTarget) {
+            orbitingAuras.pop();
+        }
+        // 更新现有光环的属性 (伤害、大小、速度可能随等级变化)
+        for(let aura of orbitingAuras) {
+            aura.damage = (0.5 * dmgMultiplier) * effectiveGlobalDamageNerf;
+            aura.size = 18 + (currentLevel - TIER4_START) * 0.1;
+            aura.speed = 0.05 + (currentLevel - TIER4_START) * 0.00015;
+        }
+    }
+    // 更新环绕光环的位置和碰撞
+    function updateOrbitingAuras() {
+        if (orbitingAuras.length === 0) return; // 没有光环则跳过
+
+        for (let i = 0; i < orbitingAuras.length; i++) {
+            let aura = orbitingAuras[i];
+            aura.enemiesHitThisFrame = {}; // 每帧重置命中记录
+            aura.angle += aura.speed; // 更新角度
+            // 计算光环绝对位置
+            aura.x = player.x + cos(aura.angle) * aura.radius;
+            aura.y = player.y + sin(aura.angle) * aura.radius;
+
+            // 检查与所有敌人的碰撞
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                let enemy = enemies[j];
+                if (!enemy) continue; // 检查敌人是否存在
+                let enemyId = j; // 使用索引作为临时 ID
+                // 如果本帧未命中过该敌人，且距离足够近
+                if (!aura.enemiesHitThisFrame[enemyId] && dist(aura.x, aura.y, enemy.x, enemy.y) < aura.size / 2 + enemy.size / 2) {
+                    enemy.health -= aura.damage; // 敌人扣血
+                    aura.enemiesHitThisFrame[enemyId] = true; // 标记为已命中
+                    // 少量粒子效果
+                    if (frameCount % 3 === 0) {
+                        createParticles(enemy.x + random(-5, 5), enemy.y + random(-5, 5), color(aura.color), 1);
+                    }
+                    if (enemy.health <= 0) { // 如果敌人死亡
+                        handleEnemyDeath(enemy, j); // 处理敌人死亡
+                    }
+                }
+            }
+        }
+    }
+    // 绘制环绕光环
+    function drawOrbitingAuras() {
+        if (orbitingAuras.length === 0) return;
+
+        for (let aura of orbitingAuras) {
+            push();
+            noFill(); // 无填充
+            strokeWeight(max(2, aura.size * 0.15)); // 外环粗细
+            // 外环颜色带闪烁
+            stroke(red(aura.color), green(aura.color), blue(aura.color), 150 + sin(frameCount * 0.1 + aura.angle) * 50);
+            ellipse(aura.x, aura.y, aura.size); // 绘制外环
+            strokeWeight(1); // 内环细线
+            // 内环颜色带闪烁
+            stroke(255, 150, 255, 100 + sin(frameCount * 0.1 + aura.angle) * 50);
+            ellipse(aura.x, aura.y, aura.size * 0.5); // 绘制内环
+            pop();
+        }
+    }
+
+    // --- 光束武器逻辑 ---
+    function updateBeamLaser() {
+        if (!isBeamActive) return; // 未激活则跳过
+
+        // 寻找最近的敌人作为目标
+        let target = findNearestEnemy();
+        if (target) {
+            beamTargetX = target.x;
+            beamTargetY = target.y;
+        } else { // 没有敌人则射向屏幕顶端中间
+            beamTargetX = player.x;
+            beamTargetY = 0;
+        }
+
+        // 按固定间隔计算伤害
+        if (frameCount % BEAM_DAMAGE_INTERVAL === 0) {
+            let currentLevel = min(weaponLevel, config.maxWeaponLevel);
+            let dmgMultiplier = 1 + floor(currentLevel / config.damageScalingDivisor);
+            let globalDamageNerf = config.playerDamageMultiplier;
+            const TIER5_START = 1001;
+            let beamDmgMod = 1.0; // 默认伤害系数
+            // 过渡期间伤害渐增
+            if (currentLevel < TIER5_START + config.transitionLevelRange) {
+                beamDmgMod = map(currentLevel, TIER5_START - config.transitionLevelRange, TIER5_START + config.transitionLevelRange, 0.1, 1.0);
+            }
+            let beamDamage = (2.5 * dmgMultiplier) * globalDamageNerf * beamDmgMod; // 计算光束伤害
+            let beamWidth = 12 + (currentLevel - TIER5_START) * 0.08; // 光束宽度随等级增加
+
+            // 计算光束向量和长度
+            let beamDx = beamTargetX - player.x;
+            let beamDy = beamTargetY - player.y;
+            let beamLen = sqrt(beamDx * beamDx + beamDy * beamDy);
+            if (beamLen === 0) return; // 长度为 0 则跳过
+
+            // 检查所有敌人是否与光束碰撞
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                let enemy = enemies[j];
+                if (!enemy) continue; // 检查敌人是否存在
+                let enemyId = j; // 使用索引作为 ID
+
+                // 检查冷却时间，防止单次伤害计算中多次命中
+                if (beamHitCooldowns[enemyId] && frameCount < beamHitCooldowns[enemyId] + 1) continue;
+
+                // 计算敌人中心到光束线段的距离
+                let distToBeam = pointToLineDistance(enemy.x, enemy.y, player.x, player.y, beamTargetX, beamTargetY);
+                // 计算敌人中心在光束线段上的投影点
+                let proj = projectPointOnLineSegment(enemy.x, enemy.y, player.x, player.y, beamTargetX, beamTargetY);
+                // 计算投影点到玩家的距离平方
+                let distAlongBeamSq = distSq(player.x, player.y, proj.x, proj.y);
+
+                // 如果敌人离光束足够近，并且投影点在光束线段内 (或接近端点)
+                if (distToBeam < enemy.size / 2 + beamWidth / 2 && distAlongBeamSq <= beamLen * beamLen + enemy.size * enemy.size) { // 加一点容差
+                    enemy.health -= beamDamage; // 敌人扣血
+                    beamHitCooldowns[enemyId] = frameCount; // 设置命中冷却
+                    createParticles(proj.x, proj.y, color(colors.beamLaser), 2); // 在碰撞点创建粒子
+                    if (enemy.health <= 0) { // 如果敌人死亡
+                        handleEnemyDeath(enemy, j); // 处理敌人死亡
+                    }
+                }
+            }
+        }
+    }
+    // 绘制光束武器
+    function drawBeamLaser() {
+        if (!isBeamActive) return; // 未激活则不绘制
+
+        let currentLevel = min(weaponLevel, config.maxWeaponLevel);
+        const TIER5_START = 1001;
+        // 光束宽度和波动效果随等级增强
+        let beamWidth = 6 + (currentLevel - TIER5_START) * 0.05;
+        let waveAmplitude = 3 + (currentLevel - TIER5_START) * 0.04;
+        let waveSpeed = 0.12 + (currentLevel - TIER5_START) * 0.0004;
+
+        push();
+        strokeWeight(beamWidth); // 设置光束宽度
+        let baseColor = color(colors.beamLaser); // 外层颜色
+        let coreColor = color(255, 200, 150); // 核心颜色
+        let dx = beamTargetX - player.x; // X 分量
+        let dy = beamTargetY - player.y; // Y 分量
+        let angle = atan2(dy, dx); // 光束角度
+        let segments = 20; // 分段绘制，用于波动效果
+
+        // 绘制外层波动光束
+        stroke(red(baseColor), green(baseColor), blue(baseColor), 150); // 半透明外层
+        noFill();
+        beginShape();
+        for (let i = 0; i <= segments; i++) {
+            let t = i / segments; // 当前段比例
+            let currentX = player.x + dx * t; // 直线上的 X
+            let currentY = player.y + dy * t; // 直线上的 Y
+            // 计算波动偏移量 (正弦波，幅度随距离衰减)
+            let wiggle = sin(frameCount * waveSpeed + t * PI * 3) * waveAmplitude * (1 - t);
+            let offsetX = cos(angle + HALF_PI) * wiggle; // 垂直于光束方向的 X 偏移
+            let offsetY = sin(angle + HALF_PI) * wiggle; // 垂直于光束方向的 Y 偏移
+            vertex(currentX + offsetX, currentY + offsetY); // 添加顶点
+        }
+        endShape();
+
+        // 绘制核心光束 (更细，更亮，波动幅度较小)
+        strokeWeight(beamWidth * 0.4);
+        stroke(red(coreColor), green(coreColor), blue(coreColor), 220); // 核心颜色
+        beginShape();
+        for (let i = 0; i <= segments; i++) {
+            let t = i / segments;
+            let currentX = player.x + dx * t;
+            let currentY = player.y + dy * t;
+            let wiggle = sin(frameCount * waveSpeed + t * PI * 3) * waveAmplitude * 0.5 * (1 - t); // 较小波动
+            let offsetX = cos(angle + HALF_PI) * wiggle;
+            let offsetY = sin(angle + HALF_PI) * wiggle;
+            vertex(currentX + offsetX, currentY + offsetY);
+        }
+        endShape();
+        pop();
+    }
+
+    // --- 敌人死亡处理 ---
+    function handleEnemyDeath(enemy, index) {
+        // 确保传入的 enemy 对象有效
+        if (!enemy) {
+            console.warn("尝试处理一个 null 敌人的死亡, index:", index);
+            enemies.splice(index, 1); // 尝试移除无效条目
+            return;
+        }
+        // 计算基础金币 (Boss 更多)
+        let baseGold = enemy.isBoss ? (50 * (bossCount + 1)) : (enemy.value || config.goldPerEnemyBase);
+        // 应用金币掉落乘数
+        let goldAmount = floor(baseGold * config.goldDropMultiplier);
+        goldAmount = max(0, goldAmount); // 确保金币不为负
+        // 生成金币
+        spawnGold(enemy.x, enemy.y, goldAmount);
+        // 增加分数
+        score += (enemy.value || 0);
+
+        // 如果不是 Boss
+        if (!enemy.isBoss) {
+            enemyKills++; // 增加击杀计数
+            // 检查是否达到 Boss 生成条件
+            if (enemyKills > 0 && enemyKills % config.bossSpawnInterval === 0 && frameCount > lastBossSpawnTime + config.bossSpawnCooldown) {
+                showBossWarning(); // 显示 Boss 警告
+                setTimeout(spawnBoss, 2000); // 延迟生成 Boss
+            }
+        } else { // 如果是 Boss
+            bossCount++; // 增加 Boss 击杀计数
+            // Boss 额外掉落更多金币
+            spawnGold(enemy.x, enemy.y, floor((baseGold * 2) * config.goldDropMultiplier));
+        }
+        // 创建爆炸效果
+        createExplosion(enemy.x, enemy.y, enemy.size, color(enemy.color));
+        // 从数组中移除敌人
+        enemies.splice(index, 1);
+    }
+
+    // --- 敌人逻辑 (更新, 绘制, 射击) ---
+    function updateEnemies() {
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            let e = enemies[i];
+            // 检查敌人是否存在
+            if (!e) continue;
+
+            let isFrozen = freezeTimer > 0; // 检查是否处于冰冻状态
+
+            // --- 更新敌人位置 ---
+            if (!isFrozen) { // 非冰冻状态下移动
+                if (e.isBoss) { // Boss 移动模式
+                    e.x += sin(frameCount * 0.03 + i) * (1.5 + bossCount * 0.2); // 左右缓慢晃动
+                    if (e.y < config.height / 4) { // 向下移动到指定区域
+                        e.y += (e.speed || 0.8) * 0.5;
+                    }
+                } else { // 普通敌人移动模式
+                    if (e.state === 'descending') { // 下降状态
+                        e.y += config.enemyDescentSpeed;
+                        // 到达目标 Y 坐标后切换到悬停状态
+                        if (e.y >= e.targetY) {
+                            e.y = e.targetY;
+                            e.state = 'hovering';
+                            e.hoverPhase = random(TWO_PI); // 随机初始悬停相位
+                            e.hoverSpeedX = (random(0.5, 1.5) * (random() > 0.5 ? 1 : -1)) * (e.speed * 0.2); // 随机悬停水平速度
+                            e.hoverBobAmount = e.size * 0.15 * (e.speed * 0.1); // 悬停上下浮动幅度
+                        }
+                    } else if (e.state === 'hovering') { // 悬停状态
+                        e.x += e.hoverSpeedX * sin(frameCount * 0.02 + e.hoverPhase); // 水平移动
+                        let bobOffset = sin(frameCount * 0.05 + e.hoverPhase) * e.hoverBobAmount; // 计算垂直浮动偏移
+                        e.drawY = e.targetY + bobOffset; // 记录用于绘制的 Y 坐标
+                        // 碰到左右边界反弹
+                        let padding = e.size * 1.5;
+                        if (e.x < padding && e.hoverSpeedX < 0) e.hoverSpeedX *= -1;
+                        if (e.x > width - padding && e.hoverSpeedX > 0) e.hoverSpeedX *= -1;
+                        e.x = constrain(e.x, padding, width - padding); // 限制在屏幕内
+                    } else { // 初始状态或未知状态，设置为下降
+                        e.state = 'descending';
+                        // 确保有目标 Y 坐标，否则随机生成一个
+                        e.targetY = e.targetY || random(height * config.enemyHoverYMin, height * config.enemyHoverYMax);
+                    }
+                }
+            } else { // 冰冻状态下，使用固定 Y 坐标
+                e.drawY = e.y;
+            }
+
+            // --- 绘制敌人 ---
+            // 使用 drawY (如果有) 否则使用 e.y
+            drawEnemy(e, isFrozen, e.drawY !== undefined ? e.drawY : e.y);
+
+            // --- 敌人射击 ---
+            // 非冰冻，且处于悬停状态(或 Boss)，且达到射击间隔
+            if (!isFrozen && (e.state === 'hovering' || e.isBoss) && frameCount > (e.lastShootTime || 0) + (e.shootRate || 120)) {
+                enemyShoot(e); // 敌人射击
+                e.lastShootTime = frameCount; // 更新上次射击时间
+            }
+
+            // --- 碰撞检测 (敌人与玩家) ---
+            if (dist(player.x, player.y, e.x, e.y) < player.size / 2 + e.size / 2) {
+                if (!player.invincible) { // 如果玩家不是无敌状态
+                    if (shieldTimer <= 0) { // 如果没有护盾
+                        playerHealth -= (e.damage || 5); // 玩家扣血
+                        updateHealthBar();
+                        createHitEffect(player.x, player.y, color(255, 100, 100)); // 玩家受击效果
+                        player.invincible = true; // 玩家进入短暂无敌
+                        player.invincibleTimer = 90;
+                        if (playerHealth <= 0) { // 如果玩家死亡
+                            loseLife(); // 处理玩家死亡逻辑
+                            // 如果玩家还有生命值，敌人会被摧毁 (避免死亡时还被撞)
+                            if (playerLives > 0) {
+                                createExplosion(e.x, e.y, e.size, color(e.color));
+                                enemies.splice(i, 1);
+                            }
+                            continue; // 跳过当前敌人的后续处理
+                        }
+                    } else { // 如果有护盾
+                        createParticles(player.x, player.y, color(colors.shield), 15); // 护盾粒子效果
+                        shieldTimer = max(0, shieldTimer - 120); // 消耗护盾时间
+                        handleEnemyDeath(e, i); // 敌人被护盾摧毁
+                        continue; // 跳过当前敌人的后续处理
+                    }
+                } else { // 如果玩家处于无敌状态
+                    handleEnemyDeath(e, i); // 敌人直接被摧毁
+                    continue; // 跳过当前敌人的后续处理
+                }
+            }
+
+            // --- 移除屏幕外的敌人 ---
+            if (e.y > height + e.size * 2) {
+                enemies.splice(i, 1);
+            }
+        }
+    }
+    // 绘制单个敌人 (根据类型调用具体绘制函数)
+    function drawEnemy(e, isFrozen, drawY) {
+        push();
+        translate(e.x, drawY); // 移动到绘制坐标
+        noStroke();
+        let drawFunc = e.drawFunc || 'drawInterceptor'; // 获取绘制函数名，默认'drawInterceptor'
+
+        // 如果冰冻，绘制冰冻效果
+        if (isFrozen) {
+            fill(100, 200, 255, 120);
+            ellipse(0, 0, e.size * 1.4, e.size * 1.4);
+        }
+
+        // 检查绘制函数是否存在，然后调用
+        if (typeof this[drawFunc] === 'function') {
+            this[drawFunc](e); // 调用具体的绘制函数 (如 drawInterceptor, drawCruiser)
+        } else {
+            console.warn(`敌人绘制函数 ${drawFunc} 未找到，使用默认绘制。`);
+            drawInterceptor(e); // 使用默认绘制作为后备
+        }
+
+        // 如果是 Boss 且存活，绘制 Boss 血条
+        if (e.isBoss && e.health > 0) {
+            let bossMaxHealth = (e.maxHealth || 500);
+            let healthPercent = constrain(e.health / bossMaxHealth, 0, 1); // 计算血量百分比
+            let barWidth = e.size * 1.5;
+            let barHeight = 8;
+            let barY = -e.size * 0.6 - barHeight * 1.5; // 血条位置在头顶上方
+            fill(50, 50, 50, 180); // 血条背景
+            rect(-barWidth / 2, barY, barWidth, barHeight, 3);
+            fill(255, 0, 0); // 血条填充色
+            rect(-barWidth / 2, barY, barWidth * healthPercent, barHeight, 3);
+            noFill(); // 血条边框
+            stroke(200);
+            strokeWeight(1);
+            rect(-barWidth / 2, barY, barWidth, barHeight, 3);
+        }
+        pop();
+    }
+    // 绘制拦截机 (Interceptor)
+    function drawInterceptor(e) {
+        let sz = e.size;
+        let mainColor = color(e.color);
+        let darkColor = color(red(mainColor)*0.6, green(mainColor)*0.6, blue(mainColor)*0.6);
+        let accentColor = color(lerpColor(mainColor, color(255), 0.7));
+        fill(mainColor); // 主体
+        beginShape();
+        vertex(0, -sz * 0.6); vertex(sz * 0.5, sz * 0.1); vertex(sz * 0.3, sz * 0.5);
+        vertex(0, sz * 0.3); vertex(-sz * 0.3, sz * 0.5); vertex(-sz * 0.5, sz * 0.1);
+        endShape(CLOSE);
+        fill(darkColor); // 细节
+        triangle(0, -sz * 0.3, sz * 0.15, -sz * 0.05, -sz * 0.15, -sz * 0.05);
+        fill(accentColor); // 高光/座舱
+        ellipse(0, -sz * 0.15, sz * 0.1, sz * 0.15);
+        let engineGlow = 180 + sin(frameCount * 0.2 + (e.hoverPhase || 0)) * 50; // 引擎光效
+        fill(255, engineGlow, 50, 200);
+        ellipse(-sz*0.2, sz*0.45, sz*0.25, sz*0.3);
+        ellipse(sz*0.2, sz*0.45, sz*0.25, sz*0.3);
+    }
+    // 绘制巡洋舰 (Cruiser) 或 Boss
+    function drawCruiser(e) {
+        let sz = e.size;
+        let mainColor = color(e.color);
+        let darkColor = color(red(mainColor)*0.5, green(mainColor)*0.5, blue(mainColor)*0.5);
+        let metalColor = color(150, 150, 160);
+        fill(mainColor); // 主体
+        beginShape();
+        vertex(-sz * 0.6, -sz * 0.3); vertex(sz * 0.6, -sz * 0.3);
+        vertex(sz * 0.4, sz * 0.4); vertex(-sz * 0.4, sz * 0.4);
+        endShape(CLOSE);
+        fill(darkColor); // 上层结构
+        rect(-sz * 0.3, -sz * 0.5, sz * 0.6, sz * 0.3, 3);
+        fill(metalColor); // 炮塔?
+        rect(-sz * 0.5, -sz * 0.1, sz * 0.2, sz * 0.3, 2);
+        rect(sz * 0.3, -sz * 0.1, sz * 0.2, sz * 0.3, 2);
+        fill(80); // 引擎?
+        rect(-sz*0.45, -sz*0.05, sz*0.1, sz*0.4);
+        rect(sz*0.35, -sz*0.05, sz*0.1, sz*0.4);
+    }
+    // 绘制无人机 (Drone)
+    function drawDrone(e) {
+        let sz = e.size;
+        let mainColor = color(e.color);
+        let coreColor = color(lerpColor(mainColor, color(0), 0.3));
+        let glowColor = color(lerpColor(mainColor, color(255), 0.5));
+        let pulse = sin(frameCount * 0.1 + (e.hoverPhase || 0)) * 0.05; // 脉冲效果
+        fill(mainColor); // 主体
+        ellipse(0, 0, sz * (1 + pulse), sz * (1 - pulse));
+        fill(coreColor); // 核心
+        ellipse(0, 0, sz * 0.5, sz * 0.5);
+        fill(glowColor); // 核心光晕
+        ellipse(0, 0, sz * 0.2, sz * 0.2);
+        stroke(mainColor); // 触须/天线
+        strokeWeight(2);
+        line(0, -sz * 0.5, 0, -sz * 0.7);
+        line(sz * 0.4, sz * 0.4, sz * 0.6, sz * 0.6);
+        line(-sz * 0.4, sz * 0.4, -sz * 0.6, sz * 0.6);
+        noStroke();
+    }
+    // 绘制狙击手 (Sniper)
+    function drawSniper(e) {
+        let sz = e.size;
+        let mainColor = color(e.color);
+        let darkColor = color(red(mainColor)*0.6, green(mainColor)*0.6, blue(mainColor)*0.6);
+        let scopeColor = color(255, 0, 0); // 狙击镜颜色
+        fill(mainColor); // 主体 (长条形)
+        rect(-sz * 0.2, -sz * 0.7, sz * 0.4, sz * 1.4, sz * 0.1);
+        fill(darkColor); // 侧翼
+        triangle(-sz*0.2, sz*0.1, -sz*0.5, sz*0.3, -sz*0.2, sz*0.4);
+        triangle(sz*0.2, sz*0.1, sz*0.5, sz*0.3, sz*0.2, sz*0.4);
+        fill(darkColor); // 炮管
+        rect(-sz * 0.1, -sz * 1.0, sz * 0.2, sz * 0.5);
+        fill(scopeColor); // 狙击镜
+        ellipse(0, -sz*0.95, sz*0.15);
+    }
+    // 敌人射击逻辑
+    function enemyShoot(enemy) {
+        // 检查敌人是否存在
+        if (!enemy) return;
+        let baseDamage = (enemy.damage || 5) / 2; // 基础伤害
+        let bulletSpeed = min(6.5, 3.8 + enemyKills * 0.006); // 子弹速度随击杀数增加
+        // 获取准确的发射点 Y 坐标
+        let shootPointY = (enemy.drawY !== undefined ? enemy.drawY : enemy.y) + enemy.size * 0.5;
+
+        // --- Boss 射击模式 ---
+        if (enemy.isBoss) {
+            let pattern = (bossCount + frameCount / 120) % 3; // 根据 Boss 数量和时间切换模式
+            let bulletCount = 3 + floor((bossCount+1) * 0.8); // 子弹数量随 Boss 等级增加
+            if (pattern < 1) { // 模式 1: 密集扇形散射
+                bulletCount = min(10, bulletCount + 2);
+                for (let i = 0; i < bulletCount; i++) {
+                    let angle = map(i, 0, bulletCount -1, -PI / 2.2, PI / 2.2) + random(-0.05, 0.05); // 计算角度
+                    enemyBullets.push({ x: enemy.x, y: shootPointY, vx: sin(angle) * bulletSpeed * 0.8, vy: cos(angle) * bulletSpeed * 0.8, size: 8, damage: baseDamage * 0.8, color: color(enemy.color || colors.boss), type: 'spread' });
+                }
+            } else if (pattern < 2) { // 模式 2: 少量追踪弹
+                bulletCount = min(6, floor(bulletCount * 0.7));
+                for (let i = 0; i < bulletCount; i++) {
+                    enemyBullets.push({ x: enemy.x + random(-enemy.size*0.3, enemy.size*0.3), y: shootPointY, size: 10, damage: baseDamage * 1.1, color: color(colors.enemyBullet), type: 'homing', vx: random(-1,1), vy: random(1,2), speed: bulletSpeed * 0.7, turnRate: 0.04 + (bossCount+1) * 0.005, acceleration: 0.1, life: 300 });
+                }
+            } else { // 模式 3: 快速直线激光弹
+                bulletCount = min(7, bulletCount);
+                for (let i = 0; i < 3; i++) { // 固定发射 3 发
+                    enemyBullets.push({ x: enemy.x + (i - 1) * enemy.size * 0.3, y: shootPointY, vy: bulletSpeed * 1.5, size: 6, damage: baseDamage * 1.3, color: color(255, 100, 255), type: 'laser_bullet', isLaserVisual: true, life: 45 });
+                }
+            }
+            return; // Boss 射击完毕
+        }
+
+        // --- 普通敌人射击模式 ---
+        let pattern = enemy.shootPattern || 'single'; // 获取射击模式，默认为 'single'
+        let bulletColor = color(enemy.color || colors.enemyBullet); // 子弹颜色
+        let targetAngle = atan2(player.y - shootPointY, player.x - enemy.x); // 计算朝向玩家的角度
+
+        switch (pattern) {
+            case 'single': // 单发子弹
+                enemyBullets.push({ x: enemy.x, y: shootPointY, vx: cos(targetAngle) * bulletSpeed, vy: sin(targetAngle) * bulletSpeed, size: 6, damage: baseDamage, color: bulletColor, type: 'normal' });
+                break;
+            case 'burst': // 三连发
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        // 在 setTimeout 回调中再次检查敌人是否存在
+                        if (!enemy || enemy.health <= 0) return;
+                        let currentShootPointY = (enemy.drawY !== undefined ? enemy.drawY : enemy.y) + enemy.size * 0.5; // 重新获取 Y 坐标
+                        let angleOffset = random(-0.1, 0.1); // 轻微角度偏移
+                        enemyBullets.push({ x: enemy.x, y: currentShootPointY, vx: cos(targetAngle + angleOffset) * bulletSpeed * 0.9, vy: sin(targetAngle + angleOffset) * bulletSpeed * 0.9, size: 5, damage: baseDamage * 0.8, color: bulletColor, type: 'burst_shot' });
+                    }, i * 80); // 延迟发射
+                }
+                break;
+            case 'double_burst': // 双重三连发 (散射)
+                for (let j=0; j<2; j++) {
+                    let burstAngleOffset = (j - 0.5) * 0.2; // 两组之间的角度差
+                    for (let i = 0; i < 3; i++) {
+                        setTimeout(() => {
+                            if (!enemy || enemy.health <= 0) return;
+                            let currentShootPointY = (enemy.drawY !== undefined ? enemy.drawY : enemy.y) + enemy.size * 0.5;
+                            let angleOffset = random(-0.08, 0.08);
+                            enemyBullets.push({ x: enemy.x, y: currentShootPointY, vx: cos(targetAngle + burstAngleOffset + angleOffset) * bulletSpeed * 0.85, vy: sin(targetAngle + burstAngleOffset + angleOffset) * bulletSpeed * 0.85, size: 5, damage: baseDamage * 0.7, color: bulletColor, type: 'burst_shot' });
+                        }, (j * 3 + i) * 70); // 更复杂的延迟
+                    }
+                }
+                break;
+            case 'spread_slow': // 慢速三向散射
+                for (let i = -1; i <= 1; i++) {
+                    let angle = targetAngle + i * 0.3; // 计算三个方向的角度
+                    enemyBullets.push({ x: enemy.x, y: shootPointY, vx: cos(angle) * bulletSpeed * 0.7, vy: sin(angle) * bulletSpeed * 0.7, size: 7, damage: baseDamage * 1.1, color: bulletColor, type: 'spread' });
+                }
+                break;
+            case 'sine_wave': // 正弦波子弹
+                enemyBullets.push({ x: enemy.x, y: shootPointY, vx: cos(targetAngle) * bulletSpeed * 0.8, vy: sin(targetAngle) * bulletSpeed * 0.8, size: 6, damage: baseDamage * 0.9, color: bulletColor, type: 'sine_wave', waveAmp: 40 + random(-10, 10), waveFreq: 0.08 + random(-0.02, 0.02), initialY: shootPointY, angle: targetAngle });
+                break;
+            case 'fast_snipe': // 快速狙击弹 (激光外观)
+                enemyBullets.push({ x: enemy.x, y: shootPointY, vx: cos(targetAngle) * bulletSpeed * 1.8, vy: sin(targetAngle) * bulletSpeed * 1.8, size: 4, damage: baseDamage * 1.3, color: bulletColor, type: 'snipe_shot', isLaserVisual: true, life: 60 });
+                break;
+            case 'homing': // 追踪弹
+                enemyBullets.push({ x: enemy.x, y: shootPointY, vx: cos(targetAngle) * bulletSpeed * 0.5, vy: sin(targetAngle) * bulletSpeed * 0.5, size: 9, damage: baseDamage * 1.2, color: bulletColor, type: 'homing', speed: bulletSpeed * 0.6, turnRate: 0.05, acceleration: 0.08, life: 300 });
+                break;
+        }
+    }
+    // 更新敌人子弹
+    function updateEnemyBullets() {
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+            let b = enemyBullets[i];
+            // 检查子弹是否存在
+            if (!b) continue;
+
+            let removed = false; // 标记是否移除
+
+            // --- 更新子弹位置 (根据类型) ---
+            switch (b.type) {
+                case 'homing': // 追踪弹
+                    if (b.life !== undefined) b.life--; // 减少生命周期
+                    // 加速
+                    let currentSpeedH = sqrt((b.vx || 0) ** 2 + (b.vy || 0) ** 2);
+                    let maxSpeedH = (b.speed || 3) * 1.5;
+                    if (currentSpeedH < maxSpeedH) {
+                        let accel = b.acceleration || 0.1;
+                        let normX = (b.vx || 0) / (currentSpeedH + 0.1);
+                        let normY = (b.vy || 0) / (currentSpeedH + 0.1);
+                        b.vx = (b.vx || 0) + normX * accel;
+                        b.vy = (b.vy || 0) + normY * accel;
+                    }
+                    // 转向 (如果玩家存活)
+                    if (playerLives > 0) {
+                        let targetAngle = atan2(player.y - b.y, player.x - b.x);
+                        let currentAngle = atan2(b.vy || 0, b.vx || 0);
+                        let angleDiff = targetAngle - currentAngle;
+                        while (angleDiff > PI) angleDiff -= TWO_PI;
+                        while (angleDiff < -PI) angleDiff += TWO_PI;
+                        let turn = constrain(angleDiff, -(b.turnRate || 0.04), (b.turnRate || 0.04));
+                        let newAngle = currentAngle + turn;
+                        let currentSpeed = sqrt((b.vx || 0) ** 2 + (b.vy || 0) ** 2);
+                        b.vx = cos(newAngle) * currentSpeed;
+                        b.vy = sin(newAngle) * currentSpeed;
+                    } else { // 玩家死亡后，子弹减速直线飞行
+                         b.vx *= 0.98;
+                         b.vy *= 0.98;
+                    }
+                    // 更新位置
+                    b.x += b.vx || 0;
+                    b.y += b.vy || 0;
+                    break;
+                case 'sine_wave': // 正弦波子弹
+                    b.x += b.vx || 0;
+                    b.y += b.vy || 0;
+                    // 添加垂直于运动方向的正弦偏移
+                    b.x += cos((b.angle || 0) + HALF_PI) * sin(frameCount * (b.waveFreq || 0.08)*2) * (b.waveAmp || 40) * 0.05; // 幅度调整
+                    break;
+                case 'laser_bullet': // 激光弹
+                case 'snipe_shot':   // 狙击弹
+                    if (b.life !== undefined) b.life--; // 减少生命周期
+                    // fallthrough (执行 default 移动)
+                default: // 普通直线移动
+                    b.x += b.vx || 0;
+                    b.y += b.vy || 0;
+            }
+
+            // --- 绘制敌人子弹 ---
+            push();
+            if (b.isLaserVisual) { // 绘制激光/狙击弹外观 (带尾迹)
+                strokeWeight(b.size * 0.7);
+                let alpha = b.life !== undefined ? map(b.life, 0, 60, 50, 220) : 200; // 透明度随生命周期衰减
+                stroke(red(b.color), green(b.color), blue(b.color), alpha);
+                line(b.x, b.y, b.x - (b.vx || 0) * 0.2, b.y - (b.vy || 0) * 0.2); // 绘制短尾迹
+                fill(255, 255, 255, alpha + 30); // 头部高光
+                noStroke();
+                ellipse(b.x, b.y, b.size * 0.9);
+            } else if (b.type === 'homing') { // 绘制追踪弹外观 (箭头状)
+                translate(b.x, b.y);
+                rotate(atan2(b.vy || 0, b.vx || 0) + HALF_PI); // 朝向移动方向
+                fill(b.color);
+                noStroke();
+                beginShape();
+                vertex(0, -b.size * 0.8); vertex(b.size * 0.4, 0); vertex(b.size * 0.3, b.size * 0.6);
+                vertex(-b.size * 0.3, b.size * 0.6); vertex(-b.size * 0.4, 0);
+                endShape(CLOSE);
+                fill(255, 150 + random(-20, 20), 0, 180); // 尾部喷射效果
+                ellipse(0, b.size * 0.7, b.size * 0.5);
+            } else if (b.type === 'sine_wave') { // 绘制正弦波子弹 (旋转椭圆)
+                fill(b.color);
+                noStroke();
+                translate(b.x, b.y);
+                rotate(atan2(b.vy || 0, b.vx || 0) + HALF_PI); // 轻微旋转
+                ellipse(0, 0, b.size * 0.8, b.size * 1.2);
+            } else { // 绘制普通圆形子弹
+                fill(b.color);
+                noStroke();
+                ellipse(b.x, b.y, b.size);
+            }
+            pop();
+
+            // --- 碰撞检测 (敌人子弹与玩家) ---
+            if (dist(player.x, player.y, b.x, b.y) < player.size / 2 + b.size / 2) {
+                if (!player.invincible) { // 玩家非无敌
+                    if (shieldTimer <= 0) { // 无护盾
+                        playerHealth -= b.damage || 1; // 玩家扣血
+                        updateHealthBar();
+                        createHitEffect(b.x, b.y, b.color); // 受击效果
+                        player.invincible = true; // 进入无敌
+                        player.invincibleTimer = 90;
+                        if (playerHealth <= 0) { // 玩家死亡
+                            loseLife();
+                        }
+                    } else { // 有护盾
+                        createParticles(b.x, b.y, color(colors.shield), 8); // 护盾粒子
+                        shieldTimer = max(0, shieldTimer - 60); // 消耗护盾时间
+                    }
+                }
+                // 无论玩家是否受伤，子弹都消失
+                enemyBullets.splice(i, 1);
+                removed = true;
+            }
+
+            // --- 移除屏幕外或生命周期结束的子弹 ---
+            if (!removed && (b.y > height + b.size || b.y < -b.size || b.x < -b.size || b.x > width + b.size || (b.life !== undefined && b.life <= 0))) {
+                enemyBullets.splice(i, 1);
+            }
+        }
+    }
+
+    // --- 生成逻辑 ---
+    // 生成普通敌人
+    function spawnEnemies() {
+        // 计算生成间隔 (随击杀数缩短，但有最小值)
+        let spawnInterval = max(4, config.enemySpawnRate - floor(enemyKills / 25));
+        if (frameCount % spawnInterval === 0) {
+            // 计算最大敌人数量 (随击杀数增加)
+            let maxEnemyCount = floor(config.maxEnemies + enemyKills / 18);
+            if (enemies.length < maxEnemyCount) { // 未达到上限才生成
+                // 随机选择一种敌人类型
+                let typeDef = enemyTypes[floor(random(enemyTypes.length))];
+                // 计算属性乘数 (随击杀数增强)
+                let healthMultiplier = 1 + enemyKills / 180;
+                let speedMultiplier = 1 + enemyKills / 250;
+                let shootRateMultiplier = 1 - min(0.7, enemyKills / 350); // 射速乘数 (越小越快)
+                // 随机生成目标 Y 坐标和出生 X 坐标
+                let targetY = random(height * config.enemyHoverYMin, height * config.enemyHoverYMax);
+                let spawnX = random(typeDef.size * 2, width - typeDef.size * 2);
+                // 创建敌人对象并添加到数组
+                enemies.push({
+                    x: spawnX, y: -typeDef.size, // 从屏幕上方出生
+                    size: typeDef.size,
+                    speed: typeDef.speed * speedMultiplier,
+                    health: typeDef.health * healthMultiplier,
+                    maxHealth: typeDef.health * healthMultiplier, // 记录最大生命值 (Boss 血条用)
+                    damage: typeDef.damage,
+                    shootRate: typeDef.shootRate * shootRateMultiplier,
+                    lastShootTime: frameCount + random(0, typeDef.shootRate * shootRateMultiplier), // 错开初始射击时间
+                    color: typeDef.color,
+                    type: typeDef.type,
+                    drawFunc: typeDef.drawFunc,
+                    shootPattern: typeDef.shootPattern,
+                    isBoss: false, // 非 Boss
+                    value: typeDef.value,
+                    targetY: targetY, // 目标悬停 Y
+                    state: 'descending', // 初始状态为下降
+                    hoverPhase: 0, hoverSpeedX: 0, hoverBobAmount: 0, // 悬停参数初始化
+                    drawY: -typeDef.size // 初始绘制 Y 坐标
+                });
+            }
+        }
+    }
+    // 显示 Boss 警告
+    function showBossWarning() {
+        let warningElement = document.getElementById('boss-warning');
+        if (warningElement) {
+            warningElement.style.display = 'block'; // 显示警告
+            // 2.5 秒后隐藏
+            setTimeout(() => {
+                if (warningElement) warningElement.style.display = 'none';
+            }, 2500);
+        }
+    }
+    // 生成 Boss
+    function spawnBoss() {
+        let currentBossLevel = bossCount + 1; // Boss 等级
+        // 计算 Boss 属性 (随等级指数增长)
+        let baseHealth = 400;
+        let health = baseHealth * pow(1.3, currentBossLevel - 1);
+        let baseDamage = 15;
+        let damage = baseDamage + currentBossLevel * 3;
+        let baseShootRate = 70;
+        let shootRate = max(25, baseShootRate - currentBossLevel * 4); // 射速加快，有下限
+        // 创建 Boss 对象
+        enemies.push({
+            x: config.width / 2, y: -80, // 从屏幕上方中间出生
+            size: 50 + currentBossLevel * 4, // 体型变大
+            speed: 0.8,
+            health: health,
+            maxHealth: health,
+            damage: damage,
+            shootRate: shootRate,
+            lastShootTime: frameCount,
+            color: color(255, 50 + currentBossLevel * 15, 255 - currentBossLevel * 15), // 颜色变化
+            type: 'boss',
+            isBoss: true, // 标记为 Boss
+            value: 150 * currentBossLevel, // 价值更高
+            drawFunc: 'drawCruiser', // 使用巡洋舰外观
+            state: 'descending' // 初始下降
+        });
+        lastBossSpawnTime = frameCount; // 更新 Boss 生成时间 (用于冷却)
+    }
+
+    // --- 金币与 Powerup ---
+    // 生成金币
+    function spawnGold(x, y, amount) {
+        // 根据金额决定生成的金币数量和大小
+        let coinGroups = [];
+        
+        // 将总金额分成1-3个金币组
+        let remainingAmount = amount;
+        while (remainingAmount > 0) {
+            // 每个金币组的价值在1到剩余金额之间随机
+            let groupValue = min(remainingAmount, max(1, floor(random(1, remainingAmount * 0.5 + 5))));
+            coinGroups.push(groupValue);
+            remainingAmount -= groupValue;
+        }
+        
+        // 生成金币
+        for (let value of coinGroups) {
+            let life = random(240, 360); // 金币存在时间
+            // 根据价值计算金币大小 (8-20之间)
+            let size = constrain(8 + log(value) * 3, 8, 20);
+            goldCoins.push({
+                x: x + random(-15, 15), y: y + random(-15, 15), // 在敌人位置附近散开
+                size: size,
+                life: life, initialLife: life,
+                value: value, // 金币价值
+                vx: random(-1.5, 1.5) * (20/size), // 大金币移动更慢
+                vy: random(-1, 0.5) * (20/size), // 大金币移动更慢
+                attractDelay: 60 // 延迟吸附时间 (帧)
+            });
+        }
+    }
+    // 更新金币
+    function updateGoldCoins() {
+        for (let i = goldCoins.length - 1; i >= 0; i--) {
+            let coin = goldCoins[i];
+            coin.life--; // 减少生命
+
+            // 吸引延迟期间：自由漂浮并减速
+            if (coin.life > coin.initialLife - coin.attractDelay) {
+                coin.x += coin.vx;
+                coin.y += coin.vy;
+                coin.vx *= 0.98; // 速度衰减
+                coin.vy *= 0.98;
+            } else { // 吸引延迟结束后：飞向玩家
+                let angle = atan2(player.y - coin.y, player.x - coin.x); // 计算朝向玩家的角度
+                // 速度随剩余时间减少而增加，但受距离限制 (避免瞬移)
+                let speed = map(coin.life, 0, coin.initialLife - coin.attractDelay, 10, 3);
+                speed = min(speed, dist(player.x, player.y, coin.x, coin.y) * 0.1);
+                coin.x += cos(angle) * speed;
+                coin.y += sin(angle) * speed;
+            }
+
+            // --- 绘制金币 ---
+            push();
+            translate(coin.x, coin.y);
+            
+            // 根据金币大小决定外观
+            if (coin.size > 12) { // 大金币
+                // 金币发光效果
+                drawingContext.shadowBlur = 15;
+                drawingContext.shadowColor = color(255, 215, 0).toString();
+                
+                // 金币主体
+                fill(255, 215, 0); // 金色
+                ellipse(0, 0, coin.size, coin.size * 0.8);
+                
+                // 金币边缘
+                stroke(255, 255, 150);
+                strokeWeight(1);
+                noFill();
+                ellipse(0, 0, coin.size * 0.9, coin.size * 0.7);
+                
+                // 金币中心
+                noStroke();
+                fill(255, 255, 100);
+                ellipse(0, 0, coin.size * 0.5, coin.size * 0.4);
+                
+                // 显示金币价值
+                if (coin.size > 15) {
+                    textSize(coin.size * 0.4);
+                    textAlign(CENTER, CENTER);
+                    fill(0);
+                    text(coin.value, 0, 1);
+                }
+                
+                drawingContext.shadowBlur = 0;
+            } else { // 小金币
+                fill(255, 215, 0); // 金色
+                noStroke();
+                // 添加闪烁效果
+                let flash = (frameCount + i*5) % 20 < 10;
+                if (flash) fill(255, 255, 150);
+                rect(-coin.size / 2, -coin.size / 2, coin.size, coin.size, 2); // 圆角矩形
+            }
+            pop();
+
+            // --- 碰撞检测 (金币与玩家) ---
+            if (dist(player.x, player.y, coin.x, coin.y) < player.size / 2 + coin.size/2 + 10) { // 加大拾取范围
+                gold += coin.value; // 增加金币
+                goldCoins.splice(i, 1); // 移除金币
+                createParticles(coin.x, coin.y, color(colors.gold), 3); // 拾取粒子效果
+            } else if (coin.life <= 0) { // 生命周期结束则移除
+                goldCoins.splice(i, 1);
+            }
+        }
+    }
+    // 生成 Powerup 道具
+    function spawnPowerups() {
+        // 计算生成几率 (随击杀数缓慢增加，有上限)
+        let spawnChance = min(0.003, 0.0005 + enemyKills * 0.000002);
+        if (random() < spawnChance) {
+            // 根据权重随机选择一种 Powerup
+            let typeDef = weightedRandomPowerup();
+            // 创建 Powerup 对象
+            powerups.push({
+                x: random(width * 0.1, width * 0.9), // 在屏幕中间区域随机 X 坐标
+                y: -typeDef.size, // 从屏幕上方出生
+                size: typeDef.size,
+                type: typeDef.type,
+                color: typeDef.color,
+                symbol: typeDef.symbol, // 显示的符号
+                vy: 1.5, // 向下速度
+                life: 720 // 存在时间 (帧, 约 12 秒)
+            });
+        }
+    }
+    // 根据权重随机选择 Powerup 类型
+    function weightedRandomPowerup() {
+        let total = powerupTypes.reduce((sum, p) => sum + p.chance, 0); // 计算总权重
+        let rand = random(total); // 生成随机数
+        let current = 0;
+        // 遍历查找对应的类型
+        for (let p of powerupTypes) {
+            current += p.chance;
+            if (rand < current) return p;
+        }
+        return powerupTypes[0]; // 默认返回第一个 (理论上不会发生)
+    }
+    // 更新 Powerup 道具
+    function updatePowerups() {
+        for (let i = powerups.length - 1; i >= 0; i--) {
+            let p = powerups[i];
+            p.y += p.vy; // 向下移动
+            p.life--; // 减少生命
+
+            // --- 绘制 Powerup ---
+            push();
+            translate(p.x, p.y);
+            noStroke();
+            // 绘制外层光晕 (闪烁)
+            fill(red(p.color), green(p.color), blue(p.color), 50 + sin(frameCount * 0.1 + i) * 30);
+            ellipse(0, 0, p.size * 1.8);
+            // 绘制背景圆
+            fill(30, 30, 30, 200);
+            ellipse(0, 0, p.size * 1.2);
+            // 绘制符号
+            fill(p.color);
+            textAlign(CENTER, CENTER);
+            textSize(p.size * 0.7);
+            text(p.symbol, 0, 1); // Y 轴微调使符号居中
+            pop();
+
+            // --- 碰撞检测 (Powerup 与玩家) ---
+            if (dist(player.x, player.y, p.x, p.y) < player.size / 2 + p.size) {
+                activatePowerup(p.type); // 激活效果
+                createParticles(p.x, p.y, color(p.color), 15); // 拾取粒子效果
+                powerups.splice(i, 1); // 移除道具
+            } else if (p.life <= 0 || p.y > height + p.size) { // 超时或移出屏幕则移除
+                powerups.splice(i, 1);
+            }
+        }
+    }
+    // 激活 Powerup 效果
+    function activatePowerup(type) {
+        activePowerups[type] = config.powerupDuration; // 设置效果持续时间
+        switch (type) {
+            case 'health': // 生命恢复
+                playerHealth = min(maxHealth, playerHealth + maxHealth * 0.25); // 恢复 25% 生命，不超过上限
+                updateHealthBar();
+                createParticles(player.x, player.y, color(colors.health), 20); // 恢复粒子效果
+                break;
+            case 'shield': // 护盾
+                shieldTimer = config.powerupDuration; // 直接设置护盾计时器
+                break;
+            case 'freeze': // 冰冻 (全屏敌人)
+                freezeTimer = config.powerupDuration; // 设置冰冻计时器
+                break;
+            case 'gold': // 金币奖励
+                let baseGoldAmount = 50 + floor(enemyKills / 10); // 基础金币量随击杀数增加
+                let goldAmount = floor(baseGoldAmount * config.goldDropMultiplier); // 应用金币乘数
+                goldAmount = max(0, goldAmount); // 确保非负
+                gold += goldAmount; // 增加金币
+                createParticles(player.x, player.y, color(colors.gold), max(1, goldAmount / 2)); // 金币粒子效果
+                break;
+            case '1up': // 额外生命 (新增)
+                playerLives = min(playerLives + 1, 9); // 最多 9 条命
+                createParticles(player.x, player.y, color(colors.player), 20); // 额外生命粒子
+                break;
+            case 'laser_beam': // 激光束 Powerup
+                activePowerups[type] = floor(config.powerupDuration * (10/15)); // 设置为 10 秒持续时间 (假设 Powerup 基础持续时间是 15 秒)
+                // isBeamActive 将在 updateActivePowerups 中更新
+                break;
+        }
+        // 再次确认计时器被设置 (主要用于护盾和冰冻)
+        if (type === 'shield') shieldTimer = activePowerups[type];
+        if (type === 'freeze') freezeTimer = activePowerups[type];
+        // 更新 Powerup UI 显示
+        updatePowerupDisplay();
+    }
+    // 更新激活的 Powerup 效果 (主要是计时)
+    function updateActivePowerups() {
+        let changed = false; // 标记是否有状态变化
+        // 遍历所有激活的效果
+        for (let type in activePowerups) {
+            if (activePowerups[type] > 0) {
+                activePowerups[type]--; // 时间减少
+                if (activePowerups[type] === 0) { // 时间到
+                    delete activePowerups[type]; // 移除效果
+                    changed = true;
+                }
+            } else { // 时间异常 (小于等于 0)
+                delete activePowerups[type]; // 直接移除
+                changed = true;
+            }
+        }
+        // 将计时器同步到全局变量 (方便其他地方使用)
+        shieldTimer = activePowerups['shield'] || 0;
+        freezeTimer = activePowerups['freeze'] || 0;
+        laserBeamTimer = activePowerups['laser_beam'] || 0; // 同步激光计时器
+        isBeamActive = laserBeamTimer > 0; // 激光激活状态由计时器控制
+
+        // 如果状态有变化，或每隔一段时间，更新 UI
+        if(changed || frameCount % 60 == 0) {
+            updatePowerupDisplay();
+        }
+    }
+    // 更新 Powerup UI 显示 (底部图标)
+    function updatePowerupDisplay() {
+        let displayContainer = document.getElementById('powerup-display');
+        if (!displayContainer) return; // 找不到容器则退出
+        displayContainer.innerHTML = ''; // 清空现有图标
+        // 定义显示顺序
+        const displayOrder = ['shield', 'freeze', 'health', 'gold', '1up']; // Add '1up' to display order
+        // 遍历需要显示的 Powerup 类型
+        for (let type of displayOrder) {
+            let isActive = activePowerups[type] > 0; // 检查是否激活
+            if (isActive || type === '1up') { // Always show 1up if it was picked up, or if other powerups are active
+                // For '1up', we don't track its duration in activePowerups, it's an instant effect.
+                // So, if it's '1up', we just display it briefly or not at all depending on design.
+                // The current logic of 'activePowerups[type] > 0' won't work for instant powerups like '1up'.
+                // If 1up is an instant effect, it shouldn't be in activePowerups.
+                // For simplicity, let's assume '1up' was just an example of an item, and activePowerups only tracks timed ones.
+                // Revert '1up' display logic if it's instant:
+                if (type === '1up' && !isActive) continue; // Only show if it's considered active for some reason (e.g. if we want to show a counter for lives, but lives are separate)
+
+                // If '1up' is an instant effect, it should not be treated as an active powerup with a duration.
+                // The `activePowerups` object is for timed effects. `1up` directly modifies `playerLives`.
+                // So, we should not loop through `activePowerups` for `1up` in this display function.
+                // The original logic for `updatePowerupDisplay` doesn't include '1up' as it's an instant effect.
+                // I will remove '1up' from the displayOrder and its conditional.
+                // If the intention is to show a 1up icon *only when picked up*, it'd need a separate mechanism.
+                // For now, sticking to displaying timed active powerups.
+
+                // Find the corresponding Powerup definition
+                let powerupDef = powerupTypes.find(p => p.type === type);
+                if (powerupDef) {
+                    // Create icon element
+                    let icon = document.createElement('div');
+                    icon.className = 'powerup-icon active'; // Add active class for styling
+                    icon.textContent = powerupDef.symbol; // Set symbol
+                    let iconColor = color(powerupDef.color).toString('#rrggbb'); // Get color value
+                    // Set style (color, border, shadow)
+                    icon.style.color = iconColor;
+                    icon.style.borderColor = iconColor;
+                    icon.style.textShadow = `0 0 8px ${iconColor}`;
+                    // Set mouse hover tip (display remaining time or name)
+                    if (type === 'shield' || type === 'freeze') {
+                        icon.title = `${type.charAt(0).toUpperCase() + type.slice(1)} (${ceil(activePowerups[type] / 60)}s)`;
+                    } else {
+                        icon.title = `${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                    }
+                    displayContainer.appendChild(icon); // Add to container
+                }
+            }
+        }
+    }
+    // Update burn effect
+    function updateBurnEffect() {
+        if (burnTimer > 0) {
+            burnTimer--; // Time decreases
+            // Deal 1 damage every 15 frames
+            if (frameCount % 15 === 0) {
+                playerHealth -= 1;
+                updateHealthBar();
+                if (playerHealth <= 0) { // If burned to death
+                    loseLife();
+                    burnTimer = 0; // Stop burning
+                    return;
+                }
+            }
+            // Generate burn particles every 6 frames
+            if (frameCount % 6 === 0) {
+                createParticles(
+                    player.x + random(-player.size / 2, player.size / 2),
+                    player.y + random(-player.size / 2, player.size / 2),
+                    color(colors.fire), 1
+                );
+            }
+        }
+    }
+
+    // --- Visual Effects ---
+    // Create particles
+    function createParticles(x, y, pColor, count) {
+        count = min(count, 50); // Limit max particles per call
+        for (let i = 0; i < count; i++) {
+            if (particles.length >= config.maxParticles) break; // Don't exceed total particle limit
+            let life = random(15, 35); // Particle lifetime
+            let speed = random(1, 4); // Initial speed
+            let angle = random(TWO_PI); // Initial direction
+            particles.push({
+                x: x, y: y,
+                vx: cos(angle) * speed, vy: sin(angle) * speed, // Velocity components
+                size: random(2, 5), // Size
+                life: life, initialLife: life, // Lifetime
+                color: pColor // Color
+            });
+        }
+    }
+    // Create hit effect (few particles)
+    function createHitEffect(x, y, pColor) {
+        createParticles(x, y, pColor, 5);
+    }
+    // Create explosion effect
+    function createExplosion(x, y, baseSize, pColor) {
+        let particleCount = constrain(floor(baseSize * 1.5), 10, 50); // Particle count scales with explosion size
+        let explosionDuration = 25; // Explosion duration (frames)
+        // Create explosion object with position, size, color, lifetime, and particle array
+        explosions.push({
+            x: x, y: y, size: baseSize, color: pColor,
+            life: explosionDuration, maxLife: explosionDuration,
+            particles: []
+        });
+        let currentExplosion = explosions[explosions.length - 1];
+        // Generate particles for the explosion
+        for (let i = 0; i < particleCount; i++) {
+            let angle = random(TWO_PI);
+            let speed = random(1, 6) * (1 + baseSize / 30); // Speed scales with explosion size
+            let life = random(15, explosionDuration); // Particle lifetime
+            currentExplosion.particles.push({
+                x: 0, y: 0, // Position relative to explosion center
+                vx: cos(angle) * speed, vy: sin(angle) * speed,
+                size: random(2, 5),
+                life: life, initialLife: life
+            });
+        }
+    }
+    // Update explosion effects
+    function updateExplosions() {
+        for (let i = explosions.length - 1; i >= 0; i--) {
+            let e = explosions[i];
+            e.life--; // Decrease explosion lifetime
+
+            // Update particles within the explosion
+            for (let j = e.particles.length - 1; j >= 0; j--) {
+                let p = e.particles[j];
+                p.x += p.vx; // Update particle relative position
+                p.y += p.vy;
+                p.vx *= 0.96; // Particle velocity decay
+                p.vy *= 0.96;
+                p.life--; // Decrease particle lifetime
+                if (p.life <= 0) { // Remove if lifetime ends
+                    e.particles.splice(j, 1);
+                }
+            }
+
+            // --- Draw Explosion Effect ---
+            push();
+            translate(e.x, e.y); // Move to explosion center
+            noStroke();
+            let progress = 1 - (e.life / e.maxLife); // Explosion progress (0 to 1)
+            let currentSize = e.size * 1.5 * progress; // Explosion radius expands with progress
+            let alpha = 200 * (1 - progress); // Transparency fades with progress
+            // Draw outer glow
+            fill(red(e.color), green(e.color), blue(e.color), alpha * 0.5);
+            ellipse(0, 0, currentSize * 1.5);
+            // Draw core flame
+            fill(255, 255, 150, alpha);
+            ellipse(0, 0, currentSize);
+            // Draw particles
+            for (let p of e.particles) {
+                let pAlpha = map(p.life, 0, p.initialLife, 0, 255); // Particle transparency
+                fill(red(e.color), green(e.color), blue(e.color), pAlpha);
+                ellipse(p.x, p.y, p.size);
+            }
+            pop();
+
+            // Remove explosion object if its lifetime ends
+            if (e.life <= 0) {
+                explosions.splice(i, 1);
+            }
+        }
+    }
+    // Update regular particles
+    function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--; // Decrease life
+            p.vy += 0.05; // Slight gravity
+            p.vx *= 0.99; // Horizontal velocity decay
+
+            if (p.life <= 0) { // Remove if lifetime ends
+                particles.splice(i, 1);
+                continue;
+            }
+
+            // --- Draw Particles ---
+            let alpha = map(p.life, 0, p.initialLife, 0, 200); // Transparency fade
+            let size = p.size * (p.life / p.initialLife); // Size fade
+            fill(red(p.color), green(p.color), blue(p.color), alpha);
+            noStroke();
+            ellipse(p.x, p.y, size);
+        }
+        // If too many particles, remove some old ones (performance optimization)
+        if (particles.length > config.maxParticles * 1.1) {
+            particles.splice(0, particles.length - config.maxParticles);
+        }
+    }
+
+    // --- Game State & UI ---
+    // Check and update weapon level
+    function checkWeaponLevel() {
+        let goldThreshold = config.goldPerLevel; // Get gold threshold for current level
+        // Calculate theoretical level based on current gold
+        let newLevel = floor(gold / goldThreshold) + 1;
+        newLevel = min(config.maxWeaponLevel, newLevel); // Cap at max level
+
+        // If level increased
+        if (newLevel > weaponLevel) {
+            weaponLevel = newLevel;
+            createParticles(player.x, player.y, color(0, 255, 255), 25); // Level up particle effect
+        } else if (newLevel < weaponLevel) {
+            // If level decreased (unlikely unless gold is deducted)
+            weaponLevel = newLevel;
+        }
+
+        // --- New: Check for wingmen unlock ---
+        // If unlock level reached and no wingmen currently active
+        // The following block is now removed as wingmen are always present
+        // if (weaponLevel >= config.wingmenUnlockLevel && wingmen.length === 0) {
+        //     createWingmen(); // Create wingmen
+        //     createParticles(player.x, player.y, color(colors.player), 35); // Wingmen acquired effect
+        // }
+        // Optional: If level drops below unlock level and wingmen are active, remove them (unlikely with current logic)
+        // else if (weaponLevel < config.wingmenUnlockLevel && wingmen.length > 0) {
+        //    wingmen = [];
+        //    createParticles(player.x, player.y, color(150, 150, 150), 20); // Wingmen lost effect
+        // }
+    }
+    // Handle player losing a life
+    function loseLife() {
+        playerLives--; // Decrement lives by 1
+        createExplosion(player.x, player.y, player.size * 1.5, color(255, 0, 0)); // Player explosion effect
+
+        if (playerLives > 0) { // If lives remaining
+            // Reset player state
+            playerHealth = maxHealth; // Full health
+            burnTimer = 0; // Clear burn effect
+            activePowerups = {}; // Clear all active Powerups
+            shieldTimer = 0; freezeTimer = 0;
+            updatePowerupDisplay(); // Update Powerup UI
+            // Reset player position to starting point
+            player.x = config.width / 2;
+            player.y = config.height - 100;
+            player.targetX = player.x;
+            player.targetY = player.y - config.playerVerticalOffset;
+            // Grant temporary invincibility
+            player.invincible = true;
+            player.invincibleTimer = 180; // 3 seconds invincibility @ 60fps
+            // Note: Wingmen do not disappear upon losing a life
+        } else { // If no lives remaining
+            gameOver(); // Game over
+        }
+        // Update UI display
+        updateUI();
+        updateHealthBar();
+    }
+    // Update HUD elements (score, gold, level, lives)
+    function updateUI() {
+        try {
+            document.getElementById('score-display').textContent = `分数: ${score}`;
+            document.getElementById('gold-count').textContent = `金币: ${gold}`;
+            document.getElementById('level-display').textContent = `武器: ${weaponLevel}级`;
+            document.getElementById('lives-display').textContent = `生命: ${playerLives}`;
+        } catch (e) {
+            console.warn("UI 更新失败:", e); // Catch potential DOM errors
+        }
+    }
+    // Update health bar display
+    function updateHealthBar() {
+        try {
+            let healthFill = document.getElementById('health-bar');
+            if (healthFill) {
+                let percent = constrain((playerHealth / maxHealth) * 100, 0, 100); // Calculate percentage
+                healthFill.style.width = `${percent}%`; // Set width
+            }
+        } catch (e) {
+            console.warn("血条更新失败:", e);
+        }
+    }
+    // Handle game over
+    function gameOver() {
+        gameStarted = false; // Mark game as over
+        noLoop(); // Stop P5 draw loop
+        isBeamActive = false; // Turn off beam
+        try {
+            document.getElementById('final-score').textContent = score; // Display final score
+            document.getElementById('game-over').style.display = 'flex'; // Show game over screen
+            const restartBtn = document.getElementById('restart-btn');
+            if (restartBtn) {
+                // Re-bind event listener to avoid duplicate triggers (important!)
+                const newRestartBtn = restartBtn.cloneNode(true); // Clone button
+                restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn); // Replace old button
+                // Add new event listener (click or touchend)
+                newRestartBtn.addEventListener('click', resetGame, { once: true }); // once: true ensures it only triggers once
+                newRestartBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault(); // Prevent potential click event trigger
+                    resetGame();
+                }, { once: true, passive: false });
+            }
+        } catch (e) {
+            console.error("游戏结束画面错误:", e);
+        }
+    }
+    // Reset game state
+    function resetGame() {
+        // Reset core state variables
+        playerHealth = maxHealth;
+        playerLives = 5;
+        score = 0;
+        gold = 0;
+        weaponLevel = 1;
+        enemyKills = 0;
+        bossCount = 0;
+        burnTimer = 0, freezeTimer = 0, shieldTimer = 0, laserBeamTimer = 0;
+        lastBossSpawnTime = -config.bossSpawnCooldown; // Reset Boss cooldown
+        isBeamActive = false;
+        beamHitCooldowns = {};
+        // Clear all arrays
+        orbitingAuras = [];
+        // New: Wingmen are now always present, no need to clear them on reset. If they were destroyed, they will be recreated.
+        // If they were not created yet (e.g., first game start), create them here.
+        // If they were already present (e.g., player died but still has lives), ensure they are re-initialized or remain.
+        // The createWingmen function already handles re-initialization if called multiple times.
+        createWingmen(); // Ensure wingmen are present on game reset
+        bullets = [];
+        enemies = [];
+        goldCoins = [];
+        enemyBullets = [];
+        particles = [];
+        powerups = [];
+        activePowerups = {};
+        explosions = [];
+        // Reset player position and state
+        player.x = config.width / 2;
+        player.y = config.height - 100;
+        player.targetX = player.x;
+        player.targetY = player.y - config.playerVerticalOffset;
+        player.invincible = false;
+        player.invincibleTimer = 0;
+        // Hide game over screen, update UI
+        try {
+            document.getElementById('game-over').style.display = 'none';
+            updatePowerupDisplay(); // Clear Powerup icons
+        } catch (e) {
+            console.warn("重置游戏 UI 错误:", e);
+        }
+        updateUI();
+        updateHealthBar();
+        // Mark game as started and begin P5 draw loop
+        gameStarted = true;
+        loop();
+    }
+    // Setup start screen
+    function setupStartScreen() {
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        if (!startBtn || !startScreen) {
+            console.error("开始屏幕元素缺失!");
+            return;
+        }
+        startScreen.style.display = 'flex'; // Show start screen
+        // Similarly, re-bind start button event to prevent duplicate binding
+        const newStartBtn = startBtn.cloneNode(true);
+        startBtn.parentNode.replaceChild(newStartBtn, startBtn);
+        newStartBtn.addEventListener('click', startGame, { once: true });
+        newStartBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            startGame();
+        }, { once: true, passive: false });
+    }
+    // Start game
+    function startGame() {
+        const startScreen = document.getElementById('start-screen');
+        if(startScreen) startScreen.style.display = 'none'; // Hide start screen
+        // Try to enter fullscreen (mobile)
+        if (isMobile && document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(err => console.log("请求全屏失败:", err));
+        }
+        resetGame(); // Reset game state and start
+    }
+
+    // --- Utility Functions ---
+    // Find nearest enemy
+    function findNearestEnemy() {
+        // Ensure player object is valid
+        if (!player) return null;
+        let closest = null;
+        let minDistSq = Infinity; // Use squared distance to avoid sqrt calculation
+        for (let e of enemies) {
+            // Ensure enemy object is valid and alive
+            if (!e || e.health <= 0) continue;
+            let dSq = distSq(player.x, player.y, e.x, e.y); // Calculate squared distance
+            if (dSq < minDistSq) {
+                minDistSq = dSq;
+                closest = e;
+            }
+        }
+        return closest;
+    }
+    // Keyboard press event handler
+    function keyPressed() {
+        // If game not started, pressing space or enter can start/restart
+        if (!gameStarted && (key === ' ' || keyCode === ENTER)) {
+            const startScreen = document.getElementById('start-screen');
+            const gameOverScreen = document.getElementById('game-over');
+            if (startScreen && startScreen.style.display !== 'none') {
+                startGame(); // Start game if on start screen
+            } else if (gameOverScreen && gameOverScreen.style.display !== 'none') {
+                resetGame(); // Restart game if on game over screen
+            }
+        }
+        // Prevent default behavior for spacebar (e.g., page scrolling)
+        if (key === ' ' && gameStarted) {
+            return false;
+        }
+    }
+    // Window resize event handler
+    function windowResized() {
+        config.width = window.innerWidth;
+        config.height = window.innerHeight;
+        resizeCanvas(config.width, config.height); // Adjust canvas size
+        // If needed, recalculate player's hover target Y position
+        if (player) {
+            player.targetY = config.height - 100 - config.playerVerticalOffset;
+        }
+    }
+    // Calculate squared distance between two points (faster than dist() for comparisons)
+    function distSq(x1, y1, x2, y2) {
+        let dx = x1 - x2;
+        let dy = y1 - y2;
+        return dx * dx + dy * dy;
+    }
+    // Calculate projection point of a point onto a line segment
+    function projectPointOnLineSegment(px, py, x1, y1, x2, y2) {
+        let l2 = distSq(x1, y1, x2, y2); // Squared length of the line segment
+        if (l2 == 0) return { x: x1, y: y1 }; // Segment has zero length, return endpoint
+        // Calculate projection ratio t (dot product / squared length)
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        // Clamp t to 0-1 range to ensure projection point is on the segment
+        t = Math.max(0, Math.min(1, t));
+        // Return projection point coordinates
+        return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
+    }
+    // Calculate shortest distance from a point to a line segment
+    function pointToLineDistance(px, py, x1, y1, x2, y2) {
+        let proj = projectPointOnLineSegment(px, py, x1, y1, x2, y2); // Get projection point
+        return dist(px, py, proj.x, proj.y); // Use p5.js dist to calculate distance
+    }
+
+    // 新增：僚机路径数据
+    let wingmanPath = [
+        { x: 293.5, y: 1041.02 },
+        { x: 295.59219999685286, y: 1209.3419999968528 },
+        { x: 298.93971999181747, y: 1363.9716399911251 },
+        { x: 302.9575808657737, y: 1507.3735447832812 },
+        { x: 307.24508447532435, y: 1641.5687067097022 },
+        { x: 311.535266435623, y: 1768.2143394862203 },
+        { x: 315.6572702634322, y: 1888.6693583598178 },
+        { x: 319.50847600611996, y: 2004.0480738330207 },
+        { x: 323.03397154615357, y: 2115.2642205179 },
+        { x: 326.21153321718424, y: 2223.067060796354 },
+        { x: 329.04072494342785, y: 2328.070989821539 },
+        { x: 331.5350632606264, y: 2430.779811619044 },
+        { x: 333.71645354003863, y: 2531.6066454898505 },
+        { x: 335.61129919941806, y: 2630.890249260765 },
+        { x: 337.24783503171307, y: 2728.9084043497674 },
+        { x: 338.65434907964595, y: 2825.8888915196026 },
+        { x: 339.89764323800273, y: 2922.01849099572 },
+        { x: 341.0269075063157, y: 3017.4503625629895 },
+        { x: 342.1177193919314, y: 3112.3100972450034 },
+        { x: 343.21994098290367, y: 3206.7006796811074 },
+        { x: 344.3650122464194, y: 3300.6669572755654 },
+        { x: 345.5713453384587, y: 3394.245704899874 },
+        { x: 346.8878907055769, y: 3487.50667794866 },
+        { x: 348.3811926472978, y: 3580.5070758455176 },
+        { x: 350.12641333724235, y: 3673.2938021177933 },
+        { x: 352.20125051922895, y: 3765.9053176579123 },
+        { x: 354.681946857119, y: 3858.333560397663 },
+        { x: 357.60119513614444, y: 3950.6115194411113 },
+        { x: 360.9625390048707, y: 4042.766245853592 },
+        { x: 364.750737995568, y: 4134.819921508679 },
+        { x: 368.93914084224633, y: 4226.751135542703 },
+        { x: 373.4552533224817, y: 4318.542331047456 },
+        { x: 378.3189308301229, y: 4410.179111358206 },
+        { x: 383.4895092999902, y: 4501.610071209873 },
+        { x: 388.88922671789055, y: 4592.872258285094 },
+        { x: 394.38007259720405, y: 4683.956451683628 },
+        { x: 399.83056674361654, y: 4774.894690267279 },
+        { x: 405.07901235346765, y: 4865.713245902725 },
+        { x: 409.99038927318395, y: 4956.433661520644 },
+        { x: 414.4916865326693, y: 5047.07360232419 },
+        { x: 418.5524454699953, y: 5137.647553779951 },
+        { x: 422.17063004255004, y: 5228.167393970527 },
+        { x: 425.362463942324, y: 5318.6428629236525 },
+        { x: 428.15520732935624, y: 5409.0819474620685 },
+        { x: 430.5820997863124, y: 5499.491196780423 },
+        { x: 432.6788890470965, y: 5589.875981218326 },
+        { x: 434.40231144888185, y: 5680.24070445426 },
+        { x: 435.7394808805409, y: 5770.628577504578 },
+        { x: 436.6578510030135, y: 5861.075033402692 },
+        { x: 437.1531896304805, y: 5951.609127235998 },
+        { x: 437.19994190409426, y: 6042.215084176162 },
+        { x: 436.8787269557484, y: 6132.879968863949 },
+        { x: 436.2556802841916, y: 6223.593174304788 },
+        { x: 435.38505469066274, y: 6314.346002763128 },
+        { x: 434.39055439214434, y: 6405.13132209582 },
+        { x: 433.27700604413593, y: 6495.94328394548 },
+        { x: 431.97301107825484, y: 6586.816692659055 },
+        { x: 430.44044465623125, y: 6677.740487801038 },
+        { x: 428.62437356117107, y: 6768.705599814318 },
+        { x: 426.5008892926011, y: 6859.70459166206 },
+        { x: 424.1064735352896, y: 6950.731364974062 },
+        { x: 421.55438886176853, y: 7041.780919086756 },
+        { x: 418.9629217025113, y: 7132.849153456018 },
+        { x: 416.44888760488385, y: 7223.932705635666 },
+        { x: 414.0839354437408, y: 7315.02881841983 },
+        { x: 411.90798819475447, y: 7406.1352308996975 },
+        { x: 409.9390959986434, y: 7497.2500891300415 },
+        { x: 408.1806043453173, y: 7588.371872875777 },
+        { x: 406.6263211486283, y: 7679.499335544132 },
+        { x: 405.26419929539315, y: 7770.631454929036 },
+        { x: 404.0789238628193, y: 7861.767392821511 },
+        { x: 403.0536963080303, y: 7952.906461890193 },
+        { x: 402.1714343870421, y: 8044.048098523365 },
+        { x: 401.41555085750406, y: 8135.191840559419 },
+        { x: 400.77043193490726, y: 8226.337309025836 },
+        { x: 400.22170476424486, y: 8317.48419316515 },
+        { x: 399.756359354078, y: 8408.63223815624 },
+        { x: 399.3627725961666, y: 8499.781235045788 },
+        { x: 399.0306687078512, y: 8590.93101249207 },
+        { x: 398.75104057690663, y: 8682.081429994874 },
+        { x: 398.5160492143619, y: 8773.232372344026 },
+        { x: 398.3189131868424, y: 8864.383745067184 },
+        { x: 397.95579601829485, y: 8955.575070697027 },
+        { x: 397.5008967518202, y: 9046.79915771035 },
+        { x: 397.00530766646386, y: 9138.050109058127 },
+        { x: 396.50331870073086, y: 9229.323089160158 },
+        { x: 396.01711513455194, y: 9320.614132840676 },
+        { x: 395.56026157114854, y: 9411.919988655554 },
+        { x: 395.1402716706311, y: 9503.237990420606 },
+        { x: 394.760491368956, y: 9594.565951864803 },
+        { x: 394.42146842664687, y: 9685.902080245896 },
+        { x: 394.1219391999036, y: 9777.244905515247 },
+        { x: 393.8595315110153, y: 9868.593222232967 },
+        { x: 393.631258102219, y: 9959.94604193835 },
+        { x: 393.4338566059579, y: 10051.302554093618 },
+        { x: 393.2640178842062, y: 10142.66209405779 },
+        { x: 393.11853392641217, y: 10234.024116825265 },
+        { x: 392.99438844037405, y: 10325.388175491447 },
+        { x: 392.88880720211813, y: 10416.753903594568 },
+        { x: 392.79928067377864, y: 10508.121000635982 },
+        { x: 392.68396798842394, y: 10599.489220206793 },
+        { x: 392.55672885938236, y: 10690.858360251712 },
+        { x: 392.4269002464687, y: 10782.228255085398 },
+        { x: 392.30055661274184, y: 10873.598768845874 },
+        { x: 392.1814451795984, y: 10964.930190126315 },
+        { x: 392.1112762747007, y: 11056.11075557313 },
+        { x: 392.1939896995028, y: 11147.088419236372 },
+        { x: 392.52961121075884, y: 11237.820503437082 },
+        { x: 393.370102122265, y: 11328.232412478517 },
+        { x: 394.7378240620755, y: 11418.342177889348 },
+        { x: 396.388601178773, y: 11508.204185523082 },
+        { x: 398.1550496127862, y: 11597.863031779596 },
+        { x: 399.92553006336755, y: 11687.355285706792 },
+        { x: 401.62847836590294, y: 11776.710933923945 },
+        { x: 403.2207963537677, y: 11865.954565458864 },
+        { x: 404.6792994000497, y: 11955.10634331435 },
+        { x: 405.99445768906253, y: 12044.182801152701 },
+        { x: 415.24425240308113, y: 12131.732296577002 },
+        { x: 429.51954870385833, y: 12217.950482821781 },
+        { x: 446.4438540860155, y: 12303.076995539353 },
+        { x: 464.3922631834899, y: 12387.308335964615 },
+        { x: 482.28493201702116, y: 12470.805635110182 },
+        { x: 499.43339969192664, y: 12553.7010204064 },
+        { x: 515.4267969858488, y: 12636.102836346154 },
+        { x: 530.0480727312546, y: 12718.099925413602 },
+        { x: 543.2127370147114, y: 12799.765138445764 },
+        { x: 554.9244319014806, y: 12881.158213128989 },
+        { x: 565.2430244446125, y: 12962.328134366087 },
+        { x: 574.2619724640458, y: 13043.31506977736 },
+        { x: 582.092517504552, y: 13124.151956811456 },
+        { x: 588.8528704161324, y: 13204.865804176268 },
+        { x: 594.6610184667533, y: 13285.478759012267 },
+        { x: 599.3555944040676, y: 13366.008981974639 },
+        { x: 603.0173636351727, y: 13446.471364800636 },
+        { x: 605.8735436354348, y: 13526.878118714807 },
+        { x: 608.1013640356391, y: 13607.23925692128 },
+        { x: 609.8390639477985, y: 13687.562990247441 },
+        { x: 611.1944698792829, y: 13767.856051571745 },
+        { x: 612.2516865058407, y: 13848.123961854528 },
+        { x: 613.0763154745557, y: 13928.371248283262 },
+        { x: 613.7195260701535, y: 14008.601623151677 },
+        { x: 614.2212303347197, y: 14088.81813054063 },
+        { x: 614.6125596610814, y: 14169.023266596425 },
+        { x: 614.9177965356434, y: 14249.219078159029 },
+        { x: 615.1558812978019, y: 14329.407243637217 },
+        { x: 615.3415874122854, y: 14409.589139326185 },
+        { x: 615.4864381815827, y: 14489.765893787991 },
+        { x: 615.5994217816345, y: 14569.938432443525 },
+        { x: 615.687548989675, y: 14650.107514137915 },
+        { x: 615.7562882119464, y: 14730.273761124168 },
+        { x: 615.8099048053182, y: 14810.437683649749 },
+        { x: 615.8517257481482, y: 14890.599700117578 },
+        { x: 615.8843460835556, y: 14970.760153618052 },
+        { x: 615.9097899451733, y: 15050.919325485293 },
+        { x: 615.9296361572352, y: 15131.077446413283 },
+        { x: 615.9451162026435, y: 15211.234705571087 },
+        { x: 615.9571906380619, y: 15291.39125807734 },
+        { x: 615.9666086976882, y: 15371.54723112932 },
+        { x: 615.9739547841968, y: 15451.702729028797 },
+        { x: 615.9796847316735, y: 15531.857837303221 },
+        { x: 615.9841540907054, y: 15612.012626085101 },
+        { x: 615.9876401907502, y: 15692.167152883096 },
+        { x: 615.9903593487852, y: 15772.321464854303 },
+        { x: 615.9924802920525, y: 15852.475600667547 },
+        { x: 615.9941346278009, y: 15932.62959203126 },
+        { x: 615.9954250096847, y: 16012.783464946358 },
+        { x: 615.9964315075541, y: 16092.93724073359 },
+        { x: 615.9972165758923, y: 16173.090936875975 },
+        { x: 615.997828929196, y: 16253.244567709582 },
+        { x: 615.9983065647729, y: 16333.398144989993 },
+        { x: 615.9986791205229, y: 16413.551678356784 },
+        { x: 615.9989697140078, y: 16493.705175714404 },
+        { x: 615.9991963769261, y: 16573.858643544507 },
+        { x: 615.9993731740024, y: 16654.012087162042 },
+        { x: 615.9995110757218, y: 16734.165510925275 },
+        { x: 615.999618639063, y: 16814.31891840798 },
+        { x: 615.9997025384691, y: 16894.47231254065 },
+        { x: 615.9997679800059, y: 16974.625695726292 },
+        { x: 615.9998190244046, y: 17054.77906993537 },
+        { x: 615.9998588390356, y: 17134.93243678367 },
+        { x: 615.9998898944477, y: 17215.085797596126 },
+        { x: 615.9999141176693, y: 17295.239153459195 },
+        { x: 615.999933011782, y: 17375.392505263764 },
+        { x: 615.9999477491899, y: 17455.54585374036 },
+        { x: 615.9999592443681, y: 17535.699199488026 },
+        { x: 615.9999682106071, y: 17615.852542997964 },
+        { x: 615.9999752042736, y: 17696.005884672966 },
+        { x: 615.9999806593335, y: 17776.15922484332 },
+        { x: 615.99998491428, y: 17856.312563779862 },
+        { x: 615.9999882331384, y: 17936.46590170468 },
+        { x: 615.999990821848, y: 18016.619238799885 },
+        { x: 615.9999928410414, y: 18096.772575214807 },
+        { x: 615.9999944160123, y: 18176.925911071896 },
+        { x: 615.9999956444897, y: 18257.07924647156 },
+        { x: 615.9999966027019, y: 18337.232581496137 },
+        { x: 615.9999973501075, y: 18417.385916213145 },
+        { x: 615.9999979330838, y: 18497.539250677943 },
+        { x: 615.9999983878054, y: 18577.69258493593 },
+        { x: 615.9999987424882, y: 18657.84591902433 },
+        { x: 615.9999990191408, y: 18737.999252973674 },
+        { x: 615.9999992349298, y: 18818.15258680899 },
+        { x: 615.9999994032452, y: 18898.3059205508 },
+        { x: 615.9999995345312, y: 18978.459254215937 },
+        { x: 615.9999996369344, y: 19058.612587818203 },
+        { x: 615.9999997168088, y: 19138.765921368915 },
+        { x: 615.9999997791109, y: 19218.91925487735 },
+        { x: 615.9999998277065, y: 19299.07258835112 },
+        { x: 615.999999865611, y: 19379.225921796464 },
+        { x: 615.9999998951766, y: 19459.379255218497 },
+        { x: 615.9999999182378, y: 19539.53258862142 },
+        { x: 615.9999999362254, y: 19619.68592200867 },
+        { x: 615.9999999502559, y: 19699.839255383067 },
+        { x: 615.9999999611996, y: 19779.992588746925 },
+        { x: 615.9999999697357, y: 19860.145922102143 },
+        { x: 615.9999999763938, y: 19940.299255450274 },
+        { x: 615.9999999815872, y: 20020.452588792596 },
+        { x: 615.9999999856379, y: 20100.60592213015 },
+        { x: 615.9999999887976, y: 20180.7592554638 },
+        { x: 615.9999999912621, y: 20260.912588794243 },
+        { x: 615.9999999931845, y: 20341.06592212206 },
+        { x: 615.9999999946839, y: 20421.219255447722 },
+        { x: 615.9999999958534, y: 20501.37258877162 },
+        { x: 615.9999999967656, y: 20581.525922094068 },
+        { x: 615.9999999974772, y: 20661.67925541533 },
+        { x: 615.9999999980322, y: 20741.832588735615 },
+        { x: 615.9999999984651, y: 20821.985922055104 },
+        { x: 615.9999999988028, y: 20902.13925537394 },
+        { x: 615.9999999990662, y: 20982.292588692235 },
+        { x: 615.9999999992716, y: 21062.44592201009 },
+        { x: 615.9999999994319, y: 21142.599255327586 },
+        { x: 615.9999999995568, y: 21222.752588644784 },
+        { x: 615.9999999996544, y: 21302.905921961737 },
+        { x: 615.9999999997304, y: 21383.059255278495 },
+        { x: 615.9999999997898, y: 21463.212588595088 },
+        { x: 615.9999999998361, y: 21543.365921911547 },
+        { x: 615.9999999998721, y: 21623.519255227897 },
+        { x: 615.9999999999002, y: 21703.672588544156 },
+        { x: 615.9999999999221, y: 21783.82592186034 },
+        { x: 615.9999999999393, y: 21863.979255176466 },
+        { x: 615.9999999999526, y: 21944.132588492543 },
+        { x: 615.999999999963, y: 22024.285921808576 },
+        { x: 615.9999999999711, y: 22104.439255124576 },
+        { x: 615.9999999999775, y: 22184.59258844055 },
+        { x: 615.9999999999825, y: 22264.745921756505 },
+        { x: 615.9999999999864, y: 22344.89925507244 },
+        { x: 615.9999999999893, y: 22425.052588388357 },
+        { x: 615.9999999999917, y: 22505.205921704262 },
+        { x: 615.9999999999935, y: 22585.359255020157 },
+        { x: 615.999999999995, y: 22665.512588336045 },
+        { x: 615.9999999999961, y: 22745.665921651926 },
+        { x: 615.9999999999969, y: 22825.8192549678 },
+        { x: 615.9999999999976, y: 22905.97258828367 },
+        { x: 615.9999999999982, y: 22986.125921599534 },
+        { x: 615.9999999999986, y: 23066.279254915396 },
+        { x: 615.999999999999, y: 23146.43258823126 },
+        { x: 615.9999999999992, y: 23226.585921547117 },
+        { x: 615.9999999999994, y: 23306.739254862976 },
+        { x: 615.9999999999995, y: 23386.89258817883 },
+        { x: 615.9999999999997, y: 23467.045921494686 },
+        { x: 615.9999999999998, y: 23547.19925481054 },
+        { x: 615.9999999999998, y: 23627.352588126392 },
+        { x: 615.9999999999998, y: 23707.505921442244 },
+        { x: 615.9999999999998, y: 23787.659254758095 },
+        { x: 615.9999999999998, y: 23867.812588073946 },
+        { x: 615.9999999999998, y: 23947.965921389798 },
+        { x: 615.9999999999998, y: 24028.11925470565 },
+        { x: 615.9999999999998, y: 24108.2725880215 },
+        { x: 615.9999999999998, y: 24188.42592133735 },
+        { x: 615.9999999999998, y: 24268.579254653203 },
+        { x: 615.9999999999998, y: 24348.732587969054 },
+        { x: 615.9999999999998, y: 24428.885921284906 },
+        { x: 615.9999999999998, y: 24509.039254600753 },
+        { x: 615.9999999999998, y: 24589.1925879166 },
+        { x: 615.9999999999998, y: 24669.34592123245 },
+        { x: 615.9999999999998, y: 24749.499254548296 },
+        { x: 615.9999999999998, y: 24829.652587864144 }
+    ];
+    let wingmanPathIndex = 0;
+    let followWingmanPath = false; // 新增标志，用于控制是否跟随路径
+
+  </script>
+</body>
+</html>

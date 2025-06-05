@@ -1,0 +1,2510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华尔街之狼 - 血战180天</title>
+    <style>
+        :root {
+            --primary-color: #2962FF;
+            --secondary-color: #651FFF; /* AI Button Color */
+            --success-color: #00C853;
+            --danger-color: #FF3D00;
+            --warning-color: #FFAB00;
+            --dark-color: #263238;
+            --light-color: #ECEFF1;
+            --card-bg: #FFFFFF;
+            --market-up: #4CAF50;
+            --market-down: #F44336;
+            --profit-color: #00E676;
+            --loss-color: #FF5252;
+            --event-color: #7B1FA2; /* For market events */
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 10px;
+            margin: 0;
+            color: var(--dark-color);
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        #gameContainer {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        h1::after {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 2px;
+            background: var(--primary-color);
+            margin: 6px auto 0;
+            border-radius: 2px;
+        }
+
+        .info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            background: linear-gradient(to right, var(--primary-color), #3D5AFE);
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            font-size: 0.8em;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .info-bar span {
+            margin: 5px 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-bar span span {
+            margin-left: 5px;
+            font-weight: bold;
+            color: #FFEB3B;
+        }
+
+        #stockTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        #stockTable th, #stockTable td {
+            padding: 6px 4px;
+            text-align: left;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-size: 0.8em;
+        }
+
+        #stockTable th {
+            background: linear-gradient(to right, var(--primary-color), #304FFE);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            letter-spacing: 0.5px;
+        }
+
+        #stockTable tr:not(:first-child) {
+            transition: all 0.3s ease;
+        }
+
+        #stockTable tr:not(:first-child):hover {
+            background-color: rgba(41, 98, 255, 0.05);
+            transform: translateX(2px);
+        }
+
+        #stockTable tr:nth-child(even) {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        .stock-actions input[type="number"] {
+            width: 50px;
+            padding: 4px;
+            margin-right: 4px;
+            box-sizing: border-box;
+            -moz-appearance: textfield;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.8em;
+            transition: all 0.2s ease;
+        }
+
+        .stock-actions input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.2);
+        }
+
+        .stock-actions input::-webkit-outer-spin-button,
+        .stock-actions input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .stock-actions button {
+            padding: 4px 6px;
+            cursor: pointer;
+            margin-left: 3px;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            /* vertical-align: middle; */
+            min-width: 24px;
+            text-align: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .stock-actions button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .stock-actions button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        /* CN Market Colors */
+        .buy-button {
+            background: linear-gradient(to right, var(--danger-color), #FF6E40);
+        }
+        .sell-button {
+            background: linear-gradient(to right, var(--success-color), #69F0AE);
+        }
+
+        .close-button {
+            background: linear-gradient(to right, var(--warning-color), #FFD600);
+            color: #333;
+        }
+
+        /* Specific style for close button in stock actions to override modal styles */
+        td.stock-actions .close-button {
+            position: static; /* Override absolute positioning from modal's close-button */
+            margin-left: 3px; /* Re-add margin for spacing */
+            top: auto; /* Reset top positioning */
+            right: auto; /* Reset right positioning */
+            font-size: 0.8em; /* Reset font size if necessary */
+            min-width: 24px; /* Ensure consistent button size */
+        }
+
+        .buy-button:disabled,
+        .sell-button:disabled,
+        .close-button:disabled {
+            background: #B0BEC5;
+            cursor: not-allowed;
+            color: #ECEFF1;
+            box-shadow: none;
+        }
+
+        #controls {
+            text-align: center;
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #nextDayButton, #strategy1Button, #strategy2Button, #strategy3Button, #strategy4Button, #strategy5Button, #strategy6Button, #strategy7Button, #strategy8Button, #strategy9Button {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #nextDayButton {
+            background: linear-gradient(to right, var(--primary-color), #304FFE);
+            box-shadow: 0 4px 8px rgba(41, 98, 255, 0.3);
+        }
+        #strategy1Button, #strategy2Button, #strategy3Button, #strategy4Button, #strategy5Button, #strategy6Button, #strategy7Button, #strategy8Button, #strategy9Button {
+            background: linear-gradient(to right, var(--secondary-color), #7C4DFF);
+            box-shadow: 0 4px 8px rgba(101, 31, 255, 0.3);
+        }
+
+        #nextDayButton:hover:not(:disabled),
+        #strategy1Button:hover:not(:disabled),
+        #strategy2Button:hover:not(:disabled),
+        #strategy3Button:hover:not(:disabled),
+        #strategy4Button:hover:not(:disabled),
+        #strategy5Button:hover:not(:disabled),
+        #strategy6Button:hover:not(:disabled),
+        #strategy7Button:hover:not(:disabled),
+        #strategy8Button:hover:not(:disabled),
+        #strategy9Button:hover:not(:disabled) {
+            transform: translateY(-3px);
+        }
+        #nextDayButton:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(41, 98, 255, 0.4); }
+        #strategy1Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy2Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy3Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy4Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy5Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy6Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy7Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy8Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+        #strategy9Button:hover:not(:disabled) { box-shadow: 0 6px 12px rgba(101, 31, 255, 0.4); }
+
+        #nextDayButton:active:not(:disabled),
+        #strategy1Button:active:not(:disabled),
+        #strategy2Button:active:not(:disabled),
+        #strategy3Button:active:not(:disabled),
+        #strategy4Button:active:not(:disabled),
+        #strategy5Button:active:not(:disabled),
+        #strategy6Button:active:not(:disabled),
+        #strategy7Button:active:not(:disabled),
+        #strategy8Button:active:not(:disabled),
+        #strategy9Button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        #nextDayButton:disabled,
+        #strategy1Button:disabled,
+        #strategy2Button:disabled,
+        #strategy3Button:disabled,
+        #strategy4Button:disabled,
+        #strategy5Button:disabled,
+        #strategy6Button:disabled,
+        #strategy7Button:disabled,
+        #strategy8Button:disabled,
+        #strategy9Button:disabled {
+            background: #B0BEC5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #log {
+            height: 100px;
+            overflow-y: scroll;
+            border: 1px solid rgba(0,0,0,0.1);
+            padding: 12px;
+            background-color: #FAFAFA;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            line-height: 1.4;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        #log p {
+            margin: 3px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        #log p:last-child {
+            border-bottom: none;
+        }
+
+        #gameOverScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+            font-size: 1.2em;
+            padding: 30px;
+            box-sizing: border-box;
+            backdrop-filter: blur(5px);
+        }
+
+        #gameOverScreen h2 {
+            margin-top: 0;
+            font-size: 2.5em;
+            color: #FFEB3B;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #gameOverScreen p {
+            margin: 8px 0;
+            font-size: 0.95em; /* Further reduced font size for compactness */
+        }
+
+        #gameOverScreen button {
+            padding: 16px 40px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 30px;
+            background: linear-gradient(to right, var(--success-color), #00E676);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 200, 83, 0.3);
+            text-transform: uppercase;
+        }
+
+        #gameOverScreen button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 200, 83, 0.4);
+        }
+
+        #gameOverScreen button:active {
+            transform: translateY(0);
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 450px;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .currency {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .number {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .action-cell {
+            white-space: nowrap;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stock-name {
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .price-up { color: var(--market-up); font-weight: bold; }
+        .price-down { color: var(--market-down); font-weight: bold; }
+        .price-unchanged { color: #9E9E9E; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse { animation: pulse 0.5s ease; }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+        /* Loading Screen styles */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: var(--dark-color);
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            #gameContainer { padding: 8px; }
+            h1 { font-size: 1.2rem; margin-bottom: 8px; }
+            .info-bar { font-size: 0.75em; padding: 6px; }
+            #stockTable th, #stockTable td { padding: 4px 2px; font-size: 0.75em; }
+            .stock-actions input[type="number"] { width: 40px; padding: 3px; font-size: 0.75em; }
+            .stock-actions button { padding: 3px 4px; min-width: 20px; font-size: 0.75em; }
+            #nextDayButton, #strategy1Button, #strategy2Button, #strategy3Button, #strategy4Button, #strategy5Button, #strategy6Button, #strategy7Button, #strategy8Button, #strategy9Button { padding: 6px 10px; font-size: 0.8em; }
+            #controls { gap: 6px; }
+            #gameOverScreen h2 { font-size: 1.5em; }
+            #gameOverScreen p { font-size: 0.9em; }
+            #gameOverScreen button { padding: 10px 20px; font-size: 0.9em;}
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+
+        /* New: Help Icon */
+        #helpIcon {
+            display: inline-block; /* Make it flow with text */
+            vertical-align: middle; /* Align with middle of text */
+            margin-left: 5px; /* Add some space from the number */
+            background-color: var(--primary-color);
+            color: white;
+            width: 20px; /* Make it a bit smaller to fit inline */
+            height: 20px; /* Make it a bit smaller to fit inline */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8em; /* Adjust font size */
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Smaller shadow */
+            z-index: 10; /* Lower z-index as it's not absolutely positioned */
+            transition: all 0.2s ease;
+        }
+        #helpIcon:hover {
+            background-color: #304FFE;
+            transform: scale(1.1); /* Slightly more prominent hover effect */
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+            }
+            #helpIcon {
+                top: 10px;
+                left: 10px;
+                width: 18px;
+                height: 18px;
+                font-size: 0.7em;
+            }
+        }
+
+        /* New: Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1001; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: var(--light-color);
+            margin: 5% auto; /* 5% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 12px;
+            width: 90%; /* Could be more responsive */
+            max-width: 800px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            max-height: 85vh; /* Max height to allow scrolling */
+            overflow-y: auto; /* Enable scrolling for content */
+        }
+
+        .modal-content h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .modal-content h3 {
+            color: var(--secondary-color);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid rgba(101, 31, 255, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .modal-content p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .modal-content ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .modal-content li {
+            margin-bottom: 5px;
+        }
+
+        /* Close Button */
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: var(--danger-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #aiTradeHistoryDisplay {
+            margin-top: 10px; /* Reduced margin-top for compactness */
+            text-align: left;
+            max-height: 100px; /* Adjusted to show approx 5 items */
+            overflow-y: auto;
+            background: rgba(255,255,255,0.1);
+            padding: 5px; /* Reduced padding for compactness */
+            border-radius: 8px;
+        }
+
+        #aiTradeHistoryDisplay ul {
+            margin: 0; /* Remove default ul margin */
+            padding: 0; /* Remove default ul padding */
+            list-style: none; /* Remove bullet points */
+        }
+
+        #aiTradeHistoryDisplay li {
+            padding: 2px 0; /* Reduced padding for list items */
+            margin: 0; /* Remove default li margin */
+            font-size: 0.85em; /* Smaller font size for compactness */
+            line-height: 1.2; /* Tighter line height */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <p>华尔街的曙光正在升起...</p>
+    </div>
+
+    <div id="gameContainer" style="display: none;">
+        <h1>华尔街之狼 - 血战180天</h1>
+
+        <div class="info-bar">
+            <span>天数: <span id="currentDay">0</span>/180 <div id="helpIcon" title="查看策略说明">?</div></span>
+            <span>现金: <span id="cashDisplay">¥0.00</span></span>
+            <span>持仓市值: <span id="portfolioValueDisplay">¥0.00</span></span>
+            <span>总资产: <span id="netWorthDisplay">¥0.00</span></span>
+        </div>
+
+        <div id="log">
+            <!-- Log messages will appear here -->
+        </div>
+
+        <div id="controls">
+            <button id="nextDayButton">开始游戏</button>
+            <button id="strategy1Button" disabled title="根据股票每日价格的显著跌幅买入，在显著涨幅、达到止盈点或触及止损线时卖出。追求短期波动收益。">策略 1: 涨跌幅追击者</button>
+            <button id="strategy2Button" disabled title="寻找价格低于平均水平或绝对值较低的&quot;便宜股&quot;，长期持有。在价格大幅上涨并达到止盈点时卖出。注重长期价值投资。">策略 2: 价值投资者</button>
+            <button id="strategy3Button" disabled title="积极响应市场事件：若股票受正面事件影响则买入；若受负面事件影响则卖出。同时，也会对已持有的高利润股票进行止盈。">策略 3: 事件响应者</button>
+            <button id="strategy4Button" disabled title="追求频繁的小额交易。在股票小幅上涨时快速买入，并在达到微薄利润或出现小幅下跌时迅速卖出。注重日内交易和资金周转。">策略 4: 小步快跑者</button>
+            <button id="strategy5Button" disabled title="旨在构建并维持一个广泛分散的投资组合。在持股数量不足或某些股票权重过低时买入；在股票市值占比过高时卖出以进行再平衡。">策略 5: 多元化投资者</button>
+            <button id="strategy6Button" disabled title="识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。">策略 6: 趋势追踪者</button>
+            <button id="strategy7Button" disabled title="利用股票价格围绕其内在价值波动的特性。当价格显著低于或高于内在价值时进行交易，期待价格回归。参数：基于10日SMA，价格低于SMA 3%买入，高于SMA 3%卖出，止盈20%，止损3%。">策略 7: 价值回归者</button>
+            <button id="strategy8Button" disabled title="识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。参数：基于5日SMA，价格高于SMA 0.5%买入，低于SMA 0.5%卖出，止盈15%，止损5%。">策略 8: 趋势追踪优化</button>
+            <button id="strategy9Button" disabled title="识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。参数：基于5日SMA，价格高于SMA 0.75%买入，低于SMA 0.75%卖出，止盈12%，止损5%。">策略 9: 精准趋势</button>
+            <button id="buyAllStocksButton">雨露均沾</button>
+            <button id="sellAllButton">全仓卖出所有</button>
+            <button id="sellHalfButton">半仓卖出所有</button>
+            <button id="sellQuarterButton">四分之一仓卖出所有</button>
+        </div>
+
+        <div class="table-container">
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>名称</th>
+                        <th>代码</th>
+                        <th>价格</th>
+                        <th>涨跌幅</th>
+                        <th>持仓</th>
+                        <th>市值</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                    <!-- Stock rows generated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- New: Strategy Help Modal -->
+    <div id="strategyHelpModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>自动交易策略说明</h2>
+            <div id="strategyExplanationContent">
+                <!-- Strategy explanations will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverScreen">
+        <h2>投资详情</h2>
+        <p>您已经完成了180天的交易挑战</p>
+        <p>初始资金: ¥<span id="initialCapitalResult"></span></p>
+        <p>最终资产: ¥<span id="finalNetWorthResult"></span></p>
+        <p>盈亏: <span id="profitLossResult"></span></p>
+        <p>盈亏比例: <span id="profitLossPercentageResult"></span> <!-- New: Profit/Loss Percentage -->
+        <p>您的称号: <span id="playerTitle"></span></p>
+        <p>采用策略: <span id="usedStrategyDisplay"></span> <!-- New: Used Strategy Display -->
+        <p>巅峰资产: ¥<span id="peakNetWorthDisplay"></span></p> <!-- New: Peak Net Worth Display -->
+        <p>最低资产: ¥<span id="troughNetWorthDisplay"></span></p> <!-- New: Trough Net Worth Display -->
+        <div id="aiTradeHistoryDisplay" style="margin-top: 10px; text-align: left; max-height: 100px; overflow-y: auto; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 8px;"></div>
+        <p>总交易次数: <span style="color:#FFEB3B;" id="finalTotalTrades"></span></p>
+        <p>总交易税费: <span style="color:#FFEB3B;" id="finalTotalFees"></span></p>
+        <button id="playAgainButton">再战一轮</button>
+    </div>
+
+    <script>
+        // --- Game Configuration ---
+        const INITIAL_CASH = 5000000;
+        const MAX_DAYS = 180; // Changed from 100 to 180
+        const MIN_PRICE = 0.01;
+        const MAX_PRICE_FLUCTUATION_PERCENT = 8;
+        const INITIAL_PRICE_MIN = 10;
+        const INITIAL_PRICE_MAX = 150;
+        const DEFAULT_TRADE_QUANTITY = 100;
+        const SWIPE_INCREMENT_QUANTITY = 100;
+        const SWIPE_THRESHOLD_PX = 30;
+
+        // New: Transaction Fee
+        const TRANSACTION_FEE_PERCENT = 0.015; // 万分之三 = 0.015%
+
+        // New: Market Simulation Parameters
+        const MOMENTUM_FACTOR = 0.3; // How much previous day's change influences current day's change (0 to 1)
+        const BASE_PRICE_GROWTH_RATE_MIN = -0.05; // Annual growth rate min for base price (-5%)
+        const BASE_PRICE_GROWTH_RATE_MAX = 0.10; // Annual growth rate max for base price (10%)
+
+        // AI Configuration (Strategic AI)
+        const AI_BUY_MIN = 3; // Min stocks AI tries to buy per click
+        const AI_BUY_MAX = 8; // Max stocks AI tries to buy per click
+
+        // Market Event Configuration
+        const POSITIVE_EVENT_EFFECT_MIN = 15; // +15%
+        const POSITIVE_EVENT_EFFECT_MAX = 40; // +40%
+        const NEGATIVE_EVENT_EFFECT_MIN = 15; // -15%
+        const NEGATIVE_EVENT_EFFECT_MAX = 40; // -40%
+
+        // Strategy 6: 趋势追踪者 (Trend Follower)
+        const TREND_FOLLOW_SMA_PERIOD = 5; // SMA Period for trend detection
+        const TREND_FOLLOW_BUY_ABOVE_SMA_PERCENT = 0.5; // Buy if price is 0.5% above SMA
+        const TREND_FOLLOW_SELL_BELOW_SMA_PERCENT = 0.5; // Sell if price is 0.5% below SMA
+        const TREND_FOLLOW_PROFIT_TAKE_PERCENT = 10; // Profit target
+        const TREND_FOLLOW_STOP_LOSS_PERCENT = 5; // Stop loss
+        const TREND_FOLLOW_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 4; // Trade quantity (doubled from *2)
+
+        // Strategy 7: 价值回归者 (Mean Reversion)
+        const MEAN_REVERSION_SMA_PERIOD = 10; // Longer SMA Period for intrinsic value
+        const MEAN_REVERSION_BUY_BELOW_SMA_PERCENT = 3; // Buy if price is 3% below SMA
+        const MEAN_REVERSION_SELL_ABOVE_SMA_PERCENT = 3; // Sell if price is 3% above SMA
+        const MEAN_REVERSION_PROFIT_TAKE_PERCENT = 20; // Profit target
+        const MEAN_REVERSION_STOP_LOSS_PERCENT = 3; // Stop loss
+        const MEAN_REVERSION_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 2; // Trade quantity (doubled from *1)
+
+        // Strategy 8: 趋势追踪优化 (Trend Tracking Optimization)
+        const TREND_TRACKING_OPTIMIZED_SMA_PERIOD = 5; // SMA Period for trend detection
+        const TREND_TRACKING_OPTIMIZED_BUY_ABOVE_SMA_PERCENT = 0.5; // Buy if price is 0.5% above SMA
+        const TREND_TRACKING_OPTIMIZED_SELL_BELOW_SMA_PERCENT = 0.5; // Sell if price is 0.5% below SMA
+        const TREND_TRACKING_OPTIMIZED_PROFIT_TAKE_PERCENT = 15; // Profit target
+        const TREND_TRACKING_OPTIMIZED_STOP_LOSS_PERCENT = 5; // Stop loss
+        const TREND_TRACKING_OPTIMIZED_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 4; // Trade quantity (doubled from *2)
+
+        // Strategy 9: 精准趋势 (Precise Trend)
+        const PRECISE_TREND_SMA_PERIOD = 5; // SMA Period for trend detection
+        const PRECISE_TREND_BUY_ABOVE_SMA_PERCENT = 0.75; // Buy if price is 0.75% above SMA
+        const PRECISE_TREND_SELL_BELOW_SMA_PERCENT = 0.75; // Sell if price is 0.75% below SMA
+        const PRECISE_TREND_PROFIT_TAKE_PERCENT = 12; // Profit target
+        const PRECISE_TREND_STOP_LOSS_PERCENT = 5; // Stop loss
+        const PRECISE_TREND_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 4; // Trade quantity (doubled from *2)
+
+        // New: Per-stock event probability
+        const PER_STOCK_EVENT_PROBABILITY = 0.03; // Each stock has a 3% chance of an event each day
+
+        // New: Predefined A-share stocks for more realistic simulation
+        const predefinedStocks = [
+            { name: '同仁堂', code: '600085' }, { name: '比亚迪', code: '002594' },
+            { name: '中兴通讯', code: '000063' }, { name: '海天味业', code: '603288' },
+            { name: '洛阳钼业', code: '603993' }, { name: '包钢股份', code: '600010' },
+            { name: '德赛西威', code: '002920' }, { name: '铜陵有色', code: '000630' },
+            { name: '古井贡酒', code: '000596' }, { name: '紫光国微', code: '002049' },
+            { name: '宁德时代', code: '300750' }, { name: '传音控股', code: '688036' },
+            { name: '上海机场', code: '600009' }, { name: '中国能建', code: '601868' },
+            { name: '中国海油', code: '600938' }, { name: '申万宏源', code: '000166' },
+            { name: '中国化学', code: '601117' }, { name: '阿特斯', code: '688472' },
+            { name: '云铝股份', code: '000807' }, { name: '新希望', code: '000876' },
+            { name: '中际旭创', code: '300308' }, { name: '北京银行', code: '601169' },
+            { name: '中国平安', code: '601318' }, { name: '杭州银行', code: '600926' },
+            { name: '中国石油', code: '601857' }, { name: '阳光电源', code: '300274' },
+            { name: '国电电力', code: '600795' }, { name: '华电国际', code: '600027' },
+            { name: '中国联通', code: '600050' }, { name: '伊利股份', code: '600887' },
+            { name: '兖矿能源', code: '600188' }, { name: '万泰生物', code: '603392' },
+            { name: '云南白药', code: '000538' }, { name: '航发动力', code: '600893' },
+            { name: '药明康德', code: '603259' }, { name: '中信建投', code: '601066' },
+            { name: '中国交建', code: '601800' }, { name: '紫光股份', code: '000938' },
+            { name: '华东医药', code: '000963' }, { name: '民生银行', code: '600016' },
+            { name: '潍柴动力', code: '000338' }, { name: '五粮液', code: '000858' },
+            { name: '中国中车', code: '601766' }, { name: '中煤能源', code: '601898' },
+            { name: '牧原股份', code: '002714' }, { name: '四川路桥', code: '600039' },
+            { name: '中国人寿', code: '601628' }, { name: '汇川技术', code: '300124' },
+            { name: '中航西飞', code: '000768' }, { name: '科伦药业', code: '002422' },
+            { name: '新华保险', code: '601336' }, { name: '招商蛇口', code: '001979' },
+            { name: '生益科技', code: '600183' }, { name: '星宇股份', code: '601799' },
+            { name: '联影医疗', code: '688271' }, { name: '工商银行', code: '601398' },
+            { name: '用友网络', code: '600588' }, { name: '兆易创新', code: '603986' },
+            { name: '光大证券', code: '601788' }, { name: '长城汽车', code: '601633' },
+            { name: '百利天恒-U', code: '688506' }, { name: '国信证券', code: '002736' },
+            { name: '同花顺', code: '300033' }, { name: '华能国际', code: '600011' },
+            { name: '中国重工', code: '601989' }, { name: '宁波银行', code: '002142' },
+            { name: '青岛啤酒', code: '600600' }, { name: '双汇发展', code: '000895' },
+            { name: '中国人保', code: '601319' }, { name: '北方华创', code: '002371' },
+            { name: '中远海控', code: '601919' }, { name: '通威股份', code: '600438' },
+            { name: '中芯国际', code: '688981' }, { name: '中金公司', code: '601995' },
+            { name: '天齐锂业', code: '002466' }, { name: '海大集团', code: '002311' },
+            { name: '陕西煤业', code: '601225' }, { name: '信达证券', code: '601059' },
+            { name: '特变电工', code: '600089' }, { name: '宇通客车', code: '600066' },
+            { name: '海光信息', code: '688041' }, { name: '中微公司', code: '688012' },
+            { name: '一汽解放', code: '000800' }, { name: '海南机场', code: '600515' },
+            { name: '恩捷股份', code: '002812' }, { name: '国轩高科', code: '002074' },
+            { name: '鹏鼎控股', code: '002938' }, { name: '迈瑞医疗', code: '300760' },
+            { name: '首创证券', code: '601136' }, { name: '中国卫通', code: '601698' },
+            { name: '长安汽车', code: '000625' }, { name: '华兰生物', code: '002007' },
+            { name: '中国神华', code: '601088' }, { name: '蓝思科技', code: '300433' },
+            { name: '江苏银行', code: '600919' }, { name: '中科曙光', code: '603019' },
+            { name: '国投资本', code: '600061' }, { name: '华大九天', code: '301269' },
+            { name: '京东方A', code: '000725' }, { name: '康龙化成', code: '300759' },
+            { name: '东方盛虹', code: '000301' }, { name: '亿纬锂能', code: '300014' },
+            { name: '中国铁建', code: '601186' }, { name: '光大银行', code: '601818' },
+            { name: '美的集团', code: '000333' }, { name: '红塔证券', code: '601236' },
+            { name: '中信特钢', code: '000708' }, { name: '保利发展', code: '600048' },
+            { name: '交通银行', code: '601328' }, { name: '德业股份', code: '605117' },
+            { name: '福耀玻璃', code: '600660' }, { name: '南京银行', code: '601009' },
+            { name: '赣锋锂业', code: '002460' }, { name: '中国广核', code: '003816' },
+            { name: '爱尔眼科', code: '300015' }, { name: '中远海能', code: '600026' },
+            { name: '巨化股份', code: '600160' }, { name: '春秋航空', code: '601021' },
+            { name: '璞泰来', code: '603659' }, { name: '大全能源', code: '688120' },
+            { name: '国投电力', code: '600886' }, { name: '中航沈飞', code: '600760' },
+            { name: '中航光电', code: '002179' }, { name: '长电科技', code: '600584' },
+            { name: '华勤技术', code: '603296' }, { name: '先导智能', code: '300450' },
+            { name: '中国银河', code: '601881' }, { name: '东方电气', code: '600875' },
+            { name: '东鹏饮料', code: '605499' }, { name: '海康威视', code: '002415' },
+            { name: '华夏银行', code: '600015' }, { name: '华利集团', code: '300979' },
+            { name: '南山铝业', code: '600219' }, { name: '中国核电', code: '601985' },
+            { name: '北新建材', code: '000786' }, { name: 'TCL中环', code: '002129' },
+            { name: '纳思达', code: '002180' }, { name: '国电南瑞', code: '600406' },
+            { name: '恒力石化', code: '600346' }, { name: '潞安环能', code: '601699' },
+            { name: '方正证券', code: '601901' }, { name: '盐湖股份', code: '000792' },
+            { name: '中国巨石', code: '600176' }, { name: '中泰证券', code: '600918' },
+            { name: '深南电路', code: '002916' }, { name: '金山办公', code: '688111' },
+            { name: '新奥股份', code: '600803' }, { name: '东方证券', code: '600958' },
+            { name: '上海医药', code: '601607' }, { name: '爱美客', code: '300896' },
+            { name: '东方财富', code: '300059' }, { name: '上海银行', code: '601229' },
+            { name: '中联重科', code: '000157' }, { name: '金龙鱼', code: '300999' },
+            { name: '上汽集团', code: '600104' }, { name: '中国移动', code: '600941' },
+            { name: '上港集团', code: '600018' }, { name: '华泰证券', code: '601688' },
+            { name: '正泰电器', code: '601877' }, { name: '智飞生物', code: '300122' },
+            { name: '三环集团', code: '300408' }, { name: '圣邦股份', code: '300661' },
+            { name: '万科A', code: '000002' }, { name: '士兰微', code: '600460' },
+            { name: '广发证券', code: '000776' }, { name: 'TCL科技', code: '000100' },
+            { name: '晶澳科技', code: '002459' }, { name: '新产业', code: '300832' },
+            { name: '中信证券', code: '600030' }, { name: '福斯特', code: '603806' },
+            { name: '片仔癀', code: '600436' }, { name: '中国中免', code: '601888' },
+            { name: '华润三九', code: '000999' }, { name: '洋河股份', code: '002304' },
+            { name: '藏格矿业', code: '000408' }, { name: '卓胜微', code: '300782' },
+            { name: '中海油服', code: '601808' }, { name: '中国东航', code: '600115' },
+            { name: '江西铜业', code: '600362' }, { name: '上海莱士', code: '002252' },
+            { name: '兴业银行', code: '601166' }, { name: '荣盛石化', code: '002493' },
+            { name: '三一重工', code: '600031' }, { name: '中国中铁', code: '601390' },
+            { name: '恒瑞医药', code: '600276' }, { name: '浪潮信息', code: '000977' },
+            { name: '龙源电力', code: '001289' }, { name: '龙佰集团', code: '002601' },
+            { name: '浙商银行', code: '601916' }, { name: '中信银行', code: '601998' },
+            { name: '长春高新', code: '000661' }, { name: '思源电气', code: '002028' },
+            { name: '中金黄金', code: '600489' }, { name: '工业富联', code: '601138' },
+            { name: '中国船舶', code: '600150' }, { name: '建设银行', code: '601939' },
+            { name: '新和成', code: '002001' }, { name: '晶科能源', code: '688223' },
+            { name: '赛轮轮胎', code: '601058' }, { name: '沪硅产业', code: '688126' },
+            { name: '邮储银行', code: '601658' }, { name: '寒武纪-U', code: '688256' },
+            { name: '科大讯飞', code: '002230' }, { name: '华域汽车', code: '600741' },
+            { name: '招商银行', code: '600036' }, { name: '晶盛机电', code: '300316' },
+            { name: '宝钢股份', code: '600019' }, { name: '三七互娱', code: '002555' },
+            { name: '卫星化学', code: '002648' }, { name: '拓普集团', code: '601689' },
+            { name: '歌尔股份', code: '002241' }, { name: '华能水电', code: '600025' },
+            { name: '长江电力', code: '600900' }, { name: '海螺水泥', code: '600585' },
+            { name: '山西焦煤', code: '000983' }, { name: '山西汾酒', code: '600809' },
+            { name: '福莱特', code: '601865' }, { name: '海尔智家', code: '600690' },
+            { name: '浦发银行', code: '600000' }, { name: '昆仑万维', code: '300418' },
+            { name: '成都银行', code: '601838' }, { name: '天坛生物', code: '600161' },
+            { name: '公牛集团', code: '603195' }, { name: '泰格医药', code: '300347' },
+            { name: '泸州老窖', code: '000568' }, { name: '山金国际', code: '000975' },
+            { name: '中国电建', code: '601669' }, { name: '时代电气', code: '688187' },
+            { name: '立讯精密', code: '002475' }, { name: '中国石化', code: '600028' },
+            { name: '华友钴业', code: '603799' }, { name: '中国铝业', code: '601600' },
+            { name: '欧派家居', code: '603833' }, { name: '徐工机械', code: '000425' },
+            { name: '万华化学', code: '600309' }, { name: '紫金矿业', code: '601899' },
+            { name: '兴业证券', code: '601377' }, { name: '今世缘', code: '603369' },
+            { name: '平安银行', code: '000001' }, { name: '浙商证券', code: '601878' },
+            { name: '华鲁恒升', code: '600426' }, { name: '大华股份', code: '002236' },
+            { name: '三峡能源', code: '600905' }, { name: '北方稀土', code: '600111' },
+            { name: '天孚通信', code: '300394' }, { name: '农业银行', code: '601288' },
+            { name: '赛力斯', code: '601127' }, { name: '澜起科技', code: '688008' },
+            { name: '宝信软件', code: '600845' }, { name: '天合光能', code: '688599' },
+            { name: '顺丰控股', code: '002352' }, { name: '宝丰能源', code: '600989' },
+            { name: '招商公路', code: '001965' }, { name: '石头科技', code: '688169' },
+            { name: '小商品城', code: '600415' }, { name: '浙能电力', code: '600023' },
+            { name: '国泰君安', code: '601211' }, { name: '芒果超媒', code: '300413' },
+            { name: '中油资本', code: '000617' }, { name: '新易盛', code: '300502' },
+            { name: '复星医药', code: '600196' }, { name: '亿联网络', code: '300628' },
+            { name: '恒生电子', code: '600570' }, { name: '中国银行', code: '601988' },
+            { name: '东方雨虹', code: '002271' }, { name: '中航机载', code: '600372' },
+            { name: '招商证券', code: '600999' }, { name: '中国通号', code: '688009' },
+            { name: '中国中冶', code: '601618' }, { name: '天赐材料', code: '002709' },
+            { name: '大秦铁路', code: '601006' }, { name: '川投能源', code: '600674' },
+            { name: '招商轮船', code: '601872' }, { name: '闻泰科技', code: '600745' },
+            { name: '隆基绿能', code: '601012' }, { name: '三六零', code: '601360' },
+            { name: '润泽科技', code: '300442' }, { name: '沪电股份', code: '002463' },
+            { name: '白云山', code: '600332' }, { name: '中国国航', code: '601111' },
+            { name: '京沪高铁', code: '601816' }, { name: '温氏股份', code: '300498' },
+            { name: '格力电器', code: '000651' }, { name: '圆通速递', code: '600233' },
+            { name: '贵州茅台', code: '600519' }, { name: '盛美上海', code: '688082' },
+            { name: '中国动力', code: '600482' }, { name: '三花智控', code: '002050' },
+            { name: '中国建筑', code: '601668' }, { name: '中国电信', code: '601728' },
+            { name: '南方航空', code: '600029' }, { name: '分众传媒', code: '002027' },
+            { name: '广汽集团', code: '601238' }, { name: '合盛硅业', code: '603260' },
+            { name: '韦尔股份', code: '603501' }, { name: '恒立液压', code: '601100' },
+            { name: '华润微', code: '688396' }, { name: '中国太保', code: '601601' },
+            { name: '山东黄金', code: '600547' }, { name: '宁沪高速', code: '600377' }
+        ];
+
+        const marketEvents = [
+            // Positive Events
+            { type: 'positive', name: '突破性技术公布', description: '新材料科技取得重大进展!', effect: (stock) => Math.random() * (POSITIVE_EVENT_EFFECT_MAX - POSITIVE_EVENT_EFFECT_MIN) + POSITIVE_EVENT_EFFECT_MIN, icon: '🚀' },
+            { type: 'positive', name: '财报超预期', description: '公司盈利远超市场预期!', effect: (stock) => Math.random() * (POSITIVE_EVENT_EFFECT_MAX - POSITIVE_EVENT_EFFECT_MIN) + POSITIVE_EVENT_EFFECT_MIN, icon: '💰' },
+            { type: 'positive', name: '重大利好政策', description: '政府颁布行业扶持政策，市场信心大增!', effect: (stock) => Math.random() * (POSITIVE_EVENT_EFFECT_MAX - POSITIVE_EVENT_EFFECT_MIN) + POSITIVE_EVENT_EFFECT_MIN, icon: '🌟' },
+            { type: 'positive', name: '收购兼并成功', description: '强强联合，带来协同效应!', effect: (stock) => Math.random() * (POSITIVE_EVENT_EFFECT_MAX - POSITIVE_EVENT_EFFECT_MIN) + POSITIVE_EVENT_EFFECT_MIN, icon: '🤝' },
+            // Negative Events
+            { type: 'negative', name: '突发负面新闻', description: '公司产品被曝安全隐患!', effect: (stock) => -(Math.random() * (NEGATIVE_EVENT_EFFECT_MAX - NEGATIVE_EVENT_EFFECT_MIN) + NEGATIVE_EVENT_EFFECT_MIN), icon: '🚨' },
+            { type: 'negative', name: '核心高管离职', description: '公司首席执行官突然辞职!', effect: (stock) => -(Math.random() * (NEGATIVE_EVENT_EFFECT_MAX - NEGATIVE_EVENT_EFFECT_MIN) + NEGATIVE_EVENT_EFFECT_MIN), icon: '👔' },
+            { type: 'negative', name: '行业政策收紧', description: '监管部门加强管控，市场前景不明!', effect: (stock) => -(Math.random() * (NEGATIVE_EVENT_EFFECT_MAX - NEGATIVE_EVENT_EFFECT_MIN) + NEGATIVE_EVENT_EFFECT_MIN), icon: '🚨' },
+            { type: 'negative', name: '产品召回事件', description: '大规模产品召回，消费者信心受挫!', effect: (stock) => -(Math.random() * (NEGATIVE_EVENT_EFFECT_MAX - NEGATIVE_EVENT_EFFECT_MIN) + NEGATIVE_EVENT_EFFECT_MIN), icon: '⚡' },
+        ];
+
+        // Dynamically add more positive events
+        const additionalPositiveEvents = [
+            { name: '新药研发成功', description: '突破性药物获批上市！' },
+            { name: '全球订单激增', description: '国际市场需求旺盛，出口额创新高！' },
+            { name: '战略合作达成', description: '与行业巨头签署长期合作协议！' },
+            { name: '政府补贴加码', description: '获得巨额财政支持，发展前景广阔！' },
+            { name: '技术专利获批', description: '核心技术得到法律保护，竞争优势凸显！' },
+            { name: '消费者信心指数大涨', description: '市场情绪高涨，消费意愿强烈！' },
+            { name: '国际评级上调', description: '信用等级提升，融资成本降低！' },
+            { name: '绿色能源新政', description: '新能源产业迎来政策利好，发展提速！' },
+            { name: '旅游业复苏', description: '边境开放，旅游消费井喷式增长！' },
+            { name: '大宗商品价格上涨', description: '原材料价格攀升，相关产业利润丰厚！' },
+            { name: '新兴市场机遇', description: '在新兴经济体取得重大业务突破！' },
+            { name: '研发投入回报丰厚', description: '高投入研发项目结出硕果！' },
+            { name: '品牌影响力提升', description: '公司品牌知名度大幅提升，市场占有率扩大！' },
+            { name: '海外市场扩张', description: '成功打入国际市场，业务版图持续扩大！' },
+            { name: '管理层变动利好', description: '新管理层上任，市场预期向好！' },
+            { name: '供应链优化', description: '供应链效率大幅提升，成本显著下降！' },
+            { name: '数字化转型成功', description: '数字化战略初显成效，运营效率提高！' },
+            { name: '环保技术突破', description: '研发出创新环保技术，市场前景广阔！' },
+            { name: '行业协会力挺', description: '获得行业协会大力支持，市场地位稳固！' },
+            { name: '消费升级趋势', description: '抓住消费升级机遇，高端产品销量大增！' },
+            { name: '成功发行新债', description: '低成本融资，资金链充足！' },
+            { name: '股票回购计划', description: '公司宣布大规模股票回购，提振股价！' },
+            { name: '分红方案超预期', description: '高额分红方案出炉，吸引投资者！' },
+            { name: '战略投资者入股', description: '知名投资机构战略入股，前景看好！' },
+            { name: '产品获得国际大奖', description: '产品质量和创新获得国际认可！' },
+            { name: '产能扩张成功', description: '新增产能顺利投产，营收增长可期！' },
+            { name: '就业数据强劲', description: '全国就业率持续增长，经济活力增强！' },
+            { name: '出口数据超预期', description: '出口贸易额大幅增长，国际竞争力提升！' },
+            { name: '创新产品发布', description: '发布划时代新产品，引发市场轰动！' },
+            { name: '税收优惠政策', description: '政府出台税收减免政策，降低企业负担！' },
+            { name: '基础设施建设加速', description: '国家大力投资基建，相关产业受益！' },
+            { name: '原材料价格回落', description: '成本压力缓解，企业利润空间扩大！' },
+            { name: '人口红利显现', description: '劳动力市场供需改善，生产效率提高！' },
+            { name: '城市化进程加快', description: '城市人口增长，带动房地产及相关产业！' },
+            { name: '医疗改革利好', description: '医疗健康领域迎来政策春天，市场潜力巨大！' },
+            { name: '教育投入增加', description: '政府加大教育支出，教育行业发展迅猛！' },
+            { name: '农业科技突破', description: '农业生产效率提升，食品安全得到保障！' },
+            { name: '文化产业繁荣', description: '文化娱乐消费需求旺盛，行业发展势头良好！' },
+            { name: '体育产业发展', description: '体育赛事和健身活动兴起，相关产业蓬勃发展！' },
+            { name: '国防军工订单', description: '获得大量国防军工订单，业绩稳定增长！' },
+            { name: '区块链技术应用', description: '区块链技术在金融领域取得突破性应用！' },
+            { name: '人工智能普及', description: 'AI技术渗透各行各业，提高生产力！' },
+            { name: '大数据分析进展', description: '大数据应用帮助企业精准决策！' },
+            { name: '云计算服务增长', description: '云服务需求爆发，相关公司营收大增！' },
+            { name: '物联网设备普及', description: '智能设备连接数量激增，万物互联时代加速！' },
+            { name: '5G网络覆盖', description: '5G基站建设加速，通信行业迎来发展高峰！' },
+            { name: '自动驾驶技术成熟', description: '自动驾驶商业化落地，汽车行业迎来变革！' },
+            { name: '太空探索新进展', description: '商业航天公司取得重大突破，引爆市场！' },
+            { name: '基因编辑技术创新', description: '基因疗法取得重大进展，治愈疑难杂症！' },
+            { name: '新型电池研发成功', description: '能量密度大增，电动汽车续航里程翻倍！' }
+        ];
+
+        additionalPositiveEvents.forEach(event => {
+            marketEvents.push({
+                type: 'positive',
+                name: event.name,
+                description: event.description,
+                effect: (stock) => Math.random() * (POSITIVE_EVENT_EFFECT_MAX - POSITIVE_EVENT_EFFECT_MIN) + POSITIVE_EVENT_EFFECT_MIN,
+                icon: '✨' // Generic positive icon
+            });
+        });
+
+        // Dynamically add more negative events
+        const additionalNegativeEvents = [
+            { name: '突发疫情爆发', description: '新型病毒蔓延，经济活动停滞！' },
+            { name: '国际贸易摩擦加剧', description: '关税壁垒升高，全球供应链受阻！' },
+            { name: '自然灾害侵袭', description: '严重洪涝灾害，农产品供应紧张！' },
+            { name: '原材料价格暴涨', description: '关键原材料供应短缺，生产成本飙升！' },
+            { name: '监管审查收紧', description: '反垄断调查启动，科技巨头面临挑战！' },
+            { name: '债务危机蔓延', description: '多国政府债务高企，引发市场担忧！' },
+            { name: '银行体系风险', description: '部分银行出现流动性问题，金融市场动荡！' },
+            { name: '劳资纠纷升级', description: '大规模工人罢工，生产受到严重影响！' },
+            { name: '竞争对手反超', description: '核心产品被竞争对手超越，市场份额流失！' },
+            { name: '高管贪腐丑闻', description: '公司高层曝出贪腐丑闻，信誉受损！' },
+            { name: '产品质量问题', description: '大规模产品召回，消费者投诉激增！' },
+            { name: '网络安全漏洞', description: '公司系统遭受黑客攻击，数据泄露！' },
+            { name: '诉讼缠身', description: '面临巨额诉讼赔偿，财务压力巨大！' },
+            { name: '宏观经济下行', description: '经济增长放缓，通货膨胀压力加大！' },
+            { name: '房地产市场遇冷', description: '楼市成交量大幅下滑，相关产业受冲击！' },
+            { name: '能源价格波动', description: '国际油价剧烈波动，能源企业面临挑战！' },
+            { name: '地缘政治紧张', description: '地区冲突升级，全球避险情绪升温！' },
+            { name: '技术瓶颈出现', description: '核心技术研发遭遇瓶颈，产品升级受阻！' },
+            { name: '人才流失严重', description: '关键技术人才大量流失，影响创新能力！' },
+            { name: '市场需求萎缩', description: '消费者购买力下降，产品销量锐减！' },
+            { name: '供应链中断', description: '国际物流受阻，原材料和产品运输困难！' },
+            { name: '竞争加剧', description: '市场竞争白热化，利润空间被压缩！' },
+            { name: '新兴技术冲击', description: '颠覆性技术出现，传统产业面临淘汰！' },
+            { name: '环境法规收紧', description: '环保标准提高，企业合规成本增加！' },
+            { name: '消费者抵制', description: '因负面事件引发消费者抵制，品牌形象受损！' },
+            { name: '评级机构下调评级', description: '信用评级被下调，融资难度增加！' },
+            { name: '业绩预警发布', description: '公司发布盈利预警，股价暴跌！' },
+            { name: '退市风险警告', description: '公司面临退市风险，投资者恐慌！' },
+            { name: '国际制裁升级', description: '受到国际制裁，海外业务受阻！' },
+            { name: '货币贬值', description: '本币大幅贬值，进口成本增加！' },
+            { name: '利率上调', description: '央行加息，企业融资成本上升！' },
+            { name: '通货紧缩担忧', description: '物价持续下跌，消费欲望减弱！' },
+            { name: '罢工潮蔓延', description: '多个行业爆发罢工，社会秩序受到影响！' },
+            { name: '破产潮涌现', description: '大量中小企业倒闭，失业率飙升！' },
+            { name: '黑天鹅事件', description: '不可预测的突发事件，市场剧烈动荡！' },
+            { name: '能源危机', description: '全球能源供应紧张，工业生产受限！' },
+            { name: '粮食危机', description: '农作物歉收，食品价格暴涨！' },
+            { name: '水资源短缺', description: '干旱导致水资源匮乏，农业生产受挫！' },
+            { name: '社会动荡', description: '社会矛盾激化，影响经济稳定！' },
+            { name: '技术泄露', description: '核心技术被盗取，竞争优势丧失！' },
+            { name: '数据隐私丑闻', description: '用户数据泄露，引发广泛关注和信任危机！' },
+            { name: 'AI伦理问题', description: '人工智能发展遭遇伦理挑战，引发争议！' },
+            { name: '太空垃圾威胁', description: '太空碎片问题日益严重，威胁卫星安全！' },
+            { name: '生物武器威胁', description: '生物科技滥用，引发全球恐慌！' },
+            { name: '极端天气事件', description: '全球气候变暖，极端天气频发，影响生产生活！' },
+            { name: '养老金危机', description: '人口老龄化加剧，养老金体系面临崩溃！' },
+            { name: '教育系统崩溃', description: '教育资源分配不均，社会公平性受损！' },
+            { name: '医疗系统超载', description: '公共卫生事件导致医疗资源耗尽！' },
+            { name: '城市基础设施老化', description: '城市管网破裂，交通拥堵，影响民生！' },
+            { name: '核泄漏事故', description: '核电站发生泄漏，造成环境灾难！' }
+        ];
+
+        additionalNegativeEvents.forEach(event => {
+            marketEvents.push({
+                type: 'negative',
+                name: event.name,
+                description: event.description,
+                effect: (stock) => -(Math.random() * (NEGATIVE_EVENT_EFFECT_MAX - NEGATIVE_EVENT_EFFECT_MIN) + NEGATIVE_EVENT_EFFECT_MIN),
+                icon: '👎' // Generic negative icon
+            });
+        });
+
+        // --- Game State Variables ---
+        let cash = 0;
+        let currentDay = 0;
+        let stocks = [];
+        let gameRunning = false;
+        let swipeStartY = 0;
+        let isSwiping = false;
+        let previousPrices = {}; // Stores previous day's closing prices for fluctuation comparison
+        let aiBoughtPrices = {}; // AI's internal tracking of assumed buy price for owned stocks (for its strategy)
+        let aiTradeHistory = []; // Stores AI trade records
+        let lastMarketEventHappened = []; // Stores the actual market event that happened on the current day, initialized as array
+        let totalTrades = 0; // New: Total number of buy/sell transactions
+        let totalFees = 0;   // New: Total transaction fees paid
+        let activeStrategyName = "手动操作"; // New: Default to manual operation
+        let peakNetWorth = INITIAL_CASH; // New: Initialize at declaration
+        let troughNetWorth = INITIAL_CASH; // New: Initialize at declaration
+
+        // Store historical prices for SMA calculations for each stock
+        let historicalPrices = {}; // { stockName: [price1, price2, ...]}
+
+        // --- UI Elements ---
+        const loadingScreen = document.getElementById('loadingScreen');
+        const gameContainer = document.getElementById('gameContainer');
+        const currentDayDisplay = document.getElementById('currentDay');
+        const cashDisplay = document.getElementById('cashDisplay');
+        const portfolioValueDisplay = document.getElementById('portfolioValueDisplay');
+        const netWorthDisplay = document.getElementById('netWorthDisplay');
+        const stockTableBody = document.getElementById('stockTableBody');
+        const nextDayButton = document.getElementById('nextDayButton');
+        const logElement = document.getElementById('log');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const initialCapitalResult = document.getElementById('initialCapitalResult');
+        const finalNetWorthResult = document.getElementById('finalNetWorthResult');
+        const profitLossResult = document.getElementById('profitLossResult');
+        const playerTitleDisplay = document.getElementById('playerTitle');
+        const playAgainButton = document.getElementById('playAgainButton');
+        const aiTradeHistoryDisplay = document.getElementById('aiTradeHistoryDisplay');
+        const buyAllStocksButton = document.getElementById('buyAllStocksButton');
+        const sellAllButton = document.getElementById('sellAllButton');
+        const sellHalfButton = document.getElementById('sellHalfButton');
+        const sellQuarterButton = document.getElementById('sellQuarterButton');
+        const profitLossPercentageResult = document.getElementById('profitLossPercentageResult');
+        const usedStrategyDisplay = document.getElementById('usedStrategyDisplay');
+        const peakNetWorthDisplay = document.getElementById('peakNetWorthDisplay');
+        const troughNetWorthDisplay = document.getElementById('troughNetWorthDisplay');
+
+        // New: Help Modal UI Elements
+        const helpIcon = document.getElementById('helpIcon');
+        const strategyHelpModal = document.getElementById('strategyHelpModal');
+        const closeButton = document.querySelector('#strategyHelpModal .close-button');
+        const strategyExplanationContent = document.getElementById('strategyExplanationContent');
+
+        // --- Helper Functions ---
+        function formatCurrency(amount) {
+            return '¥' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&');
+        }
+
+        function logMessage(message, type = 'info', icon = '', doNotLog = false) {
+            // Option to suppress logging for performance during rapid events (e.g., AI sim)
+            if (doNotLog) return;
+
+            const p = document.createElement('p');
+            p.className = 'fade-in';
+            let formattedMessage = '';
+
+            switch(type) {
+                case 'error': p.style.color = 'var(--danger-color)'; p.style.fontWeight = 'bold'; formattedMessage = `${icon || '❌'} ${message}`; break;
+                case 'success': p.style.color = 'var(--success-color)'; formattedMessage = `${icon || '✅'} ${message}`; break;
+                case 'warn': p.style.color = 'var(--warning-color)'; formattedMessage = `${icon || '⚠️'} ${message}`; break;
+                case 'profit': p.style.color = 'var(--profit-color)'; p.style.fontWeight = 'bold'; formattedMessage = `${icon || '💰'} ${message}`; break;
+                case 'loss': p.style.color = 'var(--loss-color)'; p.style.fontWeight = 'bold'; formattedMessage = `${icon || '📉'} ${message}`; break;
+                case 'event': p.style.color = 'var(--event-color)'; p.style.fontWeight = 'bold'; formattedMessage = `${icon} 【市场事件】 ${message}`; break;
+                case 'ai': p.style.color = 'var(--secondary-color)'; formattedMessage = `${icon || '🤖'} ${message}`; break;
+                default: p.style.color = 'var(--dark-color)'; formattedMessage = `${icon} ${message}`;
+            }
+            p.innerHTML = formattedMessage;
+
+            logElement.appendChild(p);
+            logElement.scrollTop = logElement.scrollHeight;
+
+            // Limit log size to prevent performance issues on long games
+            if (logElement.children.length > 50) {
+                logElement.removeChild(logElement.children[0]);
+            }
+        }
+
+        function calculatePortfolioValue() {
+            return stocks.reduce((total, stock) => total + (stock.price * stock.sharesOwned), 0);
+        }
+
+        function calculateNetWorth() {
+            return cash + calculatePortfolioValue();
+        }
+
+        // --- UI Update Functions ---
+        function updateUI() {
+            currentDayDisplay.textContent = currentDay;
+            cashDisplay.textContent = formatCurrency(cash);
+            const portfolioValue = calculatePortfolioValue();
+            portfolioValueDisplay.textContent = formatCurrency(portfolioValue);
+            const netWorth = cash + portfolioValue;
+            netWorthDisplay.textContent = formatCurrency(netWorth);
+
+            // Update peak and trough net worth
+            if (netWorth > peakNetWorth) {
+                peakNetWorth = netWorth;
+            }
+            if (netWorth < troughNetWorth) {
+                troughNetWorth = netWorth;
+            }
+
+            if (currentDay > 0) {
+                // Add a slight animation for money updates
+                cashDisplay.classList.add('pulse');
+                portfolioValueDisplay.classList.add('pulse');
+                netWorthDisplay.classList.add('pulse');
+                setTimeout(() => {
+                    cashDisplay.classList.remove('pulse');
+                    portfolioValueDisplay.classList.remove('pulse');
+                    netWorthDisplay.classList.remove('pulse');
+                }, 500);
+            }
+            // Ensure action buttons are always up-to-date after UI updates
+            renderStockTable();
+        }
+
+        function renderStockTable() {
+            stockTableBody.innerHTML = '';
+            stocks.forEach((stock, index) => {
+                const row = stockTableBody.insertRow();
+                const sharesOwned = stock.sharesOwned;
+                const currentPrice = stock.price;
+                const prevPrice = previousPrices[stock.name];
+
+                let priceChangeClass = 'price-unchanged';
+                if (previousPrices[stock.name] !== undefined && previousPrices[stock.name] !== null) {
+                    if (currentPrice > previousPrices[stock.name]) priceChangeClass = 'price-up';
+                    else if (currentPrice < previousPrices[stock.name]) priceChangeClass = 'price-down';
+                }
+
+                // Extract stock name and code
+                const nameMatch = stock.name.match(/^(.*)\((\d{4,6})\)$/); // Updated regex to specifically match 4-6 digit codes
+                const stockName = nameMatch ? nameMatch[1] : stock.name; // Name without code
+                const stockCode = nameMatch ? nameMatch[2] : ''; // Extracted code
+
+                // Format stock code to be 6 digits with leading zeros
+                const formattedStockCode = stockCode ? stockCode.padStart(6, '0') : '';
+
+                // Calculate percentage change
+                let percentageChange = 0;
+                if (prevPrice !== undefined && prevPrice !== null && prevPrice > 0) {
+                    percentageChange = ((currentPrice - prevPrice) / prevPrice) * 100;
+                }
+
+                // Format percentage change and determine class
+                const formattedPercentageChange = percentageChange.toFixed(2) + '%';
+                let percentageChangeClass = 'price-unchanged';
+                if (percentageChange > 0) percentageChangeClass = 'price-up';
+                else if (percentageChange < 0) percentageChangeClass = 'price-down';
+
+                row.innerHTML = `
+                    <td class="number">${index + 1}</td>
+                    <td class="stock-name">${stockName}</td>
+                    <td class="number">${formattedStockCode}</td>
+                    <td class="currency ${priceChangeClass}">${formatCurrency(currentPrice)}</td>
+                    <td class="currency ${percentageChangeClass}">${formattedPercentageChange}</td>
+                    <td class="number">${sharesOwned}</td>
+                    <td class="currency">${formatCurrency(currentPrice * sharesOwned)}</td>
+                    <td class="stock-actions action-cell">
+                        <input type="number" id="qty-${index}" inputmode="numeric" pattern="[0-9]*" placeholder="数量(${DEFAULT_TRADE_QUANTITY})" title="向上滑动增加${SWIPE_INCREMENT_QUANTITY}股">
+                        <button class="buy-button" data-index="${index}" ${cash < currentPrice * MIN_PRICE ? 'disabled' : ''} title="买入股票">买</button>
+                        <button class="sell-button" data-index="${index}" ${sharesOwned === 0 ? 'disabled' : ''} title="卖出股票">卖</button>
+                        <button class="close-button" data-index="${index}" ${sharesOwned === 0 ? 'disabled' : ''} title="卖出全部 ${sharesOwned} 股">平仓</button>
+                    </td>
+                `;
+                // Update previous price AFTER rendering the row with comparison class
+                // REMOVED: previousPrices[stock.name] = currentPrice;
+            });
+            attachActionListeners();
+        }
+
+        // --- Game Logic Functions ---
+        function initializeGame() {
+            logElement.innerHTML = ''; // Clear previous log
+            logMessage("🎉 欢迎来到华尔街之狼模拟器 v4！", 'info');
+            logMessage("💡 提示：AI助手可以帮助您自动买卖上涨股和管理风险。手动操作能更灵活！", 'info');
+
+            cash = INITIAL_CASH;
+            currentDay = 0;
+            stocks = [];
+            gameRunning = false;
+            previousPrices = {};
+            aiBoughtPrices = {}; // Reset AI's internal buy prices
+            aiTradeHistory = []; // Reset AI trade history
+            lastMarketEventHappened = []; // Reset for a new game, ensure it's an array
+            totalTrades = 0; // Reset total trades
+            totalFees = 0;   // Reset total fees
+            activeStrategyName = "手动操作"; // Reset for a new game
+            peakNetWorth = INITIAL_CASH; // Reset for a new game
+            troughNetWorth = INITIAL_CASH; // Reset for a new game
+
+            gameOverScreen.style.display = 'none';
+            nextDayButton.disabled = false;
+            // Disable all strategy buttons until game starts
+            strategy1Button.disabled = true;
+            strategy2Button.disabled = true;
+            strategy3Button.disabled = true;
+            strategy4Button.disabled = true;
+            strategy5Button.disabled = true;
+            strategy6Button.disabled = true;
+            strategy7Button.disabled = true;
+            strategy8Button.disabled = true;
+            strategy9Button.disabled = true; // Disable Strategy 9 button
+
+            buyAllStocksButton.disabled = true; // Disable until game starts
+            sellAllButton.disabled = true; // Disable until game starts
+            sellHalfButton.disabled = true; // Disable until game starts
+            sellQuarterButton.disabled = true; // Disable until game starts
+            nextDayButton.textContent = "开始游戏";
+
+            // Use predefined stocks instead of generating random names
+            // NUM_STOCKS is implicitly defined by the length of predefinedStocks
+            stocks = predefinedStocks.map(pStock => {
+                const initialPrice = parseFloat((Math.random() * (INITIAL_PRICE_MAX - INITIAL_PRICE_MIN) + INITIAL_PRICE_MIN).toFixed(2));
+                const growthFactor = (Math.random() * (BASE_PRICE_GROWTH_RATE_MAX - BASE_PRICE_GROWTH_RATE_MIN) + BASE_PRICE_GROWTH_RATE_MIN) / 365;
+                const stockNameWithCode = `${pStock.name}(${pStock.code})`;
+                historicalPrices[stockNameWithCode] = [initialPrice]; // Initialize historical prices
+
+                return {
+                    name: stockNameWithCode,
+                    price: initialPrice,
+                    sharesOwned: 0,
+                    basePrice: initialPrice,
+                    growthFactor: growthFactor,
+                    previousDayChangePercent: 0
+                };
+            });
+
+            stocks.sort((a, b) => a.name.localeCompare(b.name)); // Sort stocks alphabetically
+
+            updateUI();
+            // No need to render stock table here, as updateUI calls it
+
+            // Hide loading screen and show game container after a short delay
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                gameContainer.style.display = 'block';
+            }, 1000); // Simulate loading time
+        }
+
+        function updateStockPrices() {
+            let marketTrend = 0;
+            stocks.forEach(stock => {
+                // Store the *current* price before calculating the new one for comparison
+                previousPrices[stock.name] = stock.price;
+                historicalPrices[stock.name].push(stock.price);
+                // Keep historical data array size limited to prevent excessive memory usage
+                if (historicalPrices[stock.name].length > Math.max(TREND_FOLLOW_SMA_PERIOD, MEAN_REVERSION_SMA_PERIOD) * 2) {
+                    historicalPrices[stock.name].shift(); // Remove oldest price
+                }
+
+                // 1. Base Price Growth (Intrinsic Value)
+                stock.basePrice = stock.basePrice * (1 + stock.growthFactor); // Compound daily
+
+                // 2. Momentum Effect
+                const momentumEffect = stock.previousDayChangePercent * MOMENTUM_FACTOR;
+
+                // 3. Random Fluctuation (reduced impact)
+                const randomFluctuation = (Math.random() * 2 - 1) * (MAX_PRICE_FLUCTUATION_PERCENT / 2); // Reduced random fluctuation
+
+                // Combine effects
+                const totalChangePercent = momentumEffect + randomFluctuation;
+                let newPrice = stock.price * (1 + totalChangePercent / 100);
+
+                // Add marketTrend from previous logic (sum up for overall market trend)
+                marketTrend += totalChangePercent;
+
+                // Small chance of significant random volatility (unrelated to market events) - keep this for realism
+                if (Math.random() < 0.03) {
+                    const bigJumpPercent = (Math.random() * 2 - 1) * MAX_PRICE_FLUCTUATION_PERCENT * 2.5;
+                    newPrice = stock.price * (1 + bigJumpPercent / 100);
+                    logMessage(`【市场波动】${stock.name} 价格剧烈波动!`, 'warn', '💥', true); // Suppress logging for performance
+                }
+
+                newPrice = Math.max(MIN_PRICE, parseFloat(newPrice.toFixed(2)));
+
+                // Calculate actual percentage change for next day's momentum
+                stock.previousDayChangePercent = ((newPrice - stock.price) / stock.price) * 100;
+
+                stock.price = newPrice;
+            });
+
+            // Apply overall market trend based on average daily stock changes - keep this
+            marketTrend = marketTrend / predefinedStocks.length * 0.3; // Less impactful overall trend, adjusted divisor
+            marketTrend = marketTrend / stocks.length * 0.3; // Less impactful overall trend, adjusted divisor
+            if (Math.abs(marketTrend) > 0.5) {
+                stocks.forEach(stock => {
+                    stock.price = Math.max(MIN_PRICE, parseFloat((stock.price * (1 + marketTrend / 100)).toFixed(2)));
+                });
+                logMessage(marketTrend > 0 ? `📈 市场整体呈现上涨趋势` : `📉 市场整体呈现下跌趋势`, marketTrend > 0 ? 'profit' : 'loss', '', true); // Suppress logging for performance
+            }
+
+            // --- Introduce Market Events (Per Stock) ---
+            const currentDayEvents = []; // Collect all events that happen on this day
+            if (currentDay > 10) { // Only after some initial days
+                stocks.forEach(stock => {
+                    if (Math.random() < PER_STOCK_EVENT_PROBABILITY) {
+                        const event = marketEvents[Math.floor(Math.random() * marketEvents.length)];
+                        const priceEffect = event.effect(stock); // Calculate percentage change for this specific stock
+
+                        stock.price = Math.max(MIN_PRICE, parseFloat((stock.price * (1 + priceEffect / 100)).toFixed(2)));
+                        
+                        currentDayEvents.push({ event: event, stock: stock, priceEffect: priceEffect });
+                        logMessage(`${event.icon} 【${event.name}】 ${stock.name}: ${event.description} 价格${priceEffect > 0 ? '上涨' : '下跌'} ${Math.abs(priceEffect).toFixed(1)}%!`, 'event', '', false); // Log event for each stock
+                    }
+                });
+            }
+            lastMarketEventHappened = currentDayEvents; // Store all events that happened today
+        }
+
+        function getQuantity(inputElement) {
+            const value = inputElement.value.trim();
+            const parsedValue = parseInt(value);
+            if (value === '' || isNaN(parsedValue) || parsedValue <= 0) {
+                // For player actions, using a default when nothing is entered is good UX.
+                // For AI, quantities are typically calculated within its logic.
+                return DEFAULT_TRADE_QUANTITY;
+            }
+            return parsedValue;
+        }
+
+        function buyStock(index, quantity, isAI = false, updateImmediate = true) {
+            if (!gameRunning || quantity <= 0) return false;
+            const stock = stocks[index];
+            const cost = stock.price * quantity;
+            const transactionFee = cost * (TRANSACTION_FEE_PERCENT / 100); // Calculate fee
+
+            if (cash >= cost + transactionFee) { // Check if cash is enough for cost + fee
+                // Update AI's assumed average buy price (still used for AI trade history display)
+                if (isAI) {
+                    const currentTotalCost = (aiBoughtPrices[stock.name] || 0) * stock.sharesOwned;
+                    aiBoughtPrices[stock.name] = (currentTotalCost + cost) / (stock.sharesOwned + quantity);
+                    // Record AI trade
+                    aiTradeHistory.push({
+                        day: currentDay,
+                        type: 'Buy',
+                        stockName: stock.name,
+                        quantity: quantity,
+                        price: stock.price
+                    });
+                }
+
+                cash -= (cost + transactionFee); // Deduct cost and fee
+                stock.sharesOwned += quantity;
+                totalTrades++; // Increment total trades
+                totalFees += transactionFee; // Add to total fees
+
+                // Only log detailed buy if not AI (AI logs its own decision)
+                if (!isAI) {
+                    logMessage(`买入 ${quantity} 股 ${stock.name} @ ${formatCurrency(stock.price)}。花费: ${formatCurrency(cost)} (含税费: ${formatCurrency(transactionFee)})`, 'success', '✅');
+                }
+                if (updateImmediate) updateUI();
+                return true;
+            } else {
+                if (!isAI) logMessage(`资金不足买入 ${quantity} 股 ${stock.name}。需要 ${formatCurrency(cost + transactionFee)}，现有 ${formatCurrency(cash)}。`, 'error', '❌');
+                return false;
+            }
+        }
+
+        function sellStock(index, quantity, isAI = false, updateImmediate = true) {
+            if (!gameRunning || quantity <= 0) return false;
+            const stock = stocks[index];
+            if (stock.sharesOwned >= quantity) {
+                const earnings = stock.price * quantity;
+                const transactionFee = earnings * (TRANSACTION_FEE_PERCENT / 100); // Calculate fee
+
+                cash += (earnings - transactionFee); // Add earnings, deduct fee
+                stock.sharesOwned -= quantity;
+                totalTrades++; // Increment total trades
+                totalFees += transactionFee; // Add to total fees
+
+                // If AI sells all shares, remove from aiBoughtPrices
+                if (isAI) {
+                    if (stock.sharesOwned === 0 && aiBoughtPrices[stock.name]) {
+                        delete aiBoughtPrices[stock.name];
+                    }
+                    // Record AI trade
+                    aiTradeHistory.push({
+                        day: currentDay,
+                        type: 'Sell',
+                        stockName: stock.name,
+                        quantity: quantity,
+                        price: stock.price
+                    });
+                }
+                 // If AI sells partial, and we're tracking average, might need to re-calculate, but simplified it's just removed when shares hit 0
+
+                // Only log detailed sell if not AI (AI logs its own decision)
+                if (!isAI) {
+                    logMessage(`卖出 ${quantity} 股 ${stock.name} @ ${formatCurrency(stock.price)}。获得: ${formatCurrency(earnings)} (扣除税费: ${formatCurrency(transactionFee)})`, 'success', '📈');
+                }
+                if (updateImmediate) updateUI();
+                return true;
+            } else {
+                if (!isAI) logMessage(`无法卖出 ${quantity} 股 ${stock.name}，只持有 ${stock.sharesOwned} 股。`, 'error', '🚫');
+                return false;
+            }
+        }
+
+        function closePosition(index) {
+            const stock = stocks[index];
+            if (stock.sharesOwned > 0) {
+                logMessage(`正在平仓 ${stock.name} (共 ${stock.sharesOwned} 股)...`, 'info', '⚡');
+                sellStock(index, stock.sharesOwned, false, true); // Close position is a manual action, update immediately
+            } else {
+                logMessage(`无法平仓 ${stock.name}，未持有该股票。`, 'warn', '⚠️');
+            }
+        }
+
+        function nextDay() {
+            if (!gameRunning && currentDay === 0) {
+                logMessage("游戏正式开始! Day 0。", 'info');
+                logMessage("市场瞬息万变，抓住机会，创造财富!", 'info');
+                nextDayButton.textContent = "下一天";
+                // Enable all strategy buttons after game starts (Day 0)
+                strategy1Button.disabled = false;
+                strategy2Button.disabled = false;
+                strategy3Button.disabled = false;
+                strategy4Button.disabled = false;
+                strategy5Button.disabled = false;
+                strategy6Button.disabled = false;
+                strategy7Button.disabled = false;
+                strategy8Button.disabled = false;
+                strategy9Button.disabled = false; // Enable Strategy 9 button
+
+                buyAllStocksButton.disabled = false; // Enable Buy All Stocks button
+                sellAllButton.disabled = false; // Enable bulk sell buttons
+                sellHalfButton.disabled = false;
+                sellQuarterButton.disabled = false;
+                gameRunning = true;
+                updateUI(); // Updates currentDay to 0, renders table etc.
+                return; // Stop execution, Day 0 display
+            }
+
+            if (!gameRunning) return; // Prevent action if game already ended
+
+            // Clear events from previous day before new ones are generated
+            lastMarketEventHappened = [];
+
+            if (currentDay >= MAX_DAYS) {
+                endGame();
+                return;
+            }
+
+            currentDay++;
+            logMessage(`📅 === 第 ${currentDay} 天 ===`, 'info');
+            updateStockPrices(); // Prices change for the new day
+            updateUI(); // Table shows new prices and change indicators
+
+            if (currentDay === MAX_DAYS) {
+                logMessage("🎯 最后一天。交易结束。点击按钮查看最终结果。", 'info', '🏁');
+                nextDayButton.textContent = "显示结果";
+                // Disable all strategy buttons on final day
+                strategy1Button.disabled = true;
+                strategy2Button.disabled = true;
+                strategy3Button.disabled = true;
+                strategy4Button.disabled = true;
+                strategy5Button.disabled = true;
+                strategy6Button.disabled = true;
+                strategy7Button.disabled = true;
+                strategy8Button.disabled = true;
+                strategy9Button.disabled = true; // Disable buy all button on final day
+                sellAllButton.disabled = true; // Disable bulk sell buttons on final day
+                sellHalfButton.disabled = true;
+                sellQuarterButton.disabled = true;
+            }
+        }
+
+        function endGame() {
+            gameRunning = false;
+            logMessage("🏁 === 游戏结束 ===", 'info');
+
+            let liquidationValue = 0;
+            stocks.forEach(stock => {
+                if (stock.sharesOwned > 0) {
+                    const value = stock.price * stock.sharesOwned;
+                    liquidationValue += value;
+                    logMessage(`💸 强制平仓 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(stock.price)} = ${formatCurrency(value)}`);
+                    stock.sharesOwned = 0; // Clear shares after liquidation
+                }
+            });
+            cash += liquidationValue;
+
+            const finalNetWorth = calculateNetWorth(); // Recalculate after liquidation
+            const profitLoss = finalNetWorth - INITIAL_CASH;
+
+            initialCapitalResult.textContent = formatCurrency(INITIAL_CASH);
+            finalNetWorthResult.textContent = formatCurrency(finalNetWorth);
+
+            if (profitLoss >= 0) {
+                profitLossResult.style.color = 'var(--profit-color)';
+                profitLossResult.textContent = formatCurrency(profitLoss) + ' 🎉';
+                logMessage(`🎊 恭喜! 您获得了 ${formatCurrency(profitLoss)} 的利润!`, 'profit');
+            } else {
+                profitLossResult.style.color = 'var(--loss-color)';
+                profitLossResult.textContent = formatCurrency(profitLoss) + ' 😢';
+                logMessage(`😞 遗憾! 您亏损了 ${formatCurrency(-profitLoss)}。再接再厉!`, 'loss');
+            }
+
+            // Determine player title based on final net worth
+            let playerTitle = "韭菜投资人 (亏损大户)"; // Default for loss
+            const profitLossPercent = (finalNetWorth - INITIAL_CASH) / INITIAL_CASH * 100;
+
+            if (profitLossPercent >= 30) {
+                playerTitle = "天之骄子 (股市传奇)";
+            } else if (profitLossPercent >= 16) {
+                playerTitle = "金融大亨 (一方霸主)";
+            } else if (profitLossPercent >= 11) {
+                playerTitle = "投资达人 (独具慧眼)";
+            } else if (profitLossPercent >= 6) {
+                playerTitle = "精英交易员 (崭露头角)";
+            } else if (profitLossPercent >= 3) {
+                playerTitle = "稳健理财人 (收益尚可)";
+            } else { // Covers all losses and profits below 3%
+                playerTitle = "韭菜投资人 (亏损大户)";
+            }
+            playerTitleDisplay.textContent = playerTitle;
+            logMessage(`您的最终称号是：${playerTitle}`, 'info', '🏆');
+
+            // --- Display new detailed statistics ---
+            profitLossPercentageResult.textContent = `${profitLossPercent.toFixed(2)}%`;
+            usedStrategyDisplay.textContent = activeStrategyName;
+            peakNetWorthDisplay.textContent = formatCurrency(peakNetWorth);
+            troughNetWorthDisplay.textContent = formatCurrency(troughNetWorth);
+            // --- End Display new detailed statistics ---
+
+            displayAiTradeHistory(); // Display AI trade history
+
+            // Display new statistics
+            document.getElementById('finalTotalTrades').textContent = totalTrades;
+            document.getElementById('finalTotalFees').textContent = formatCurrency(totalFees);
+
+            // Ensure all buttons are in correct state at game end
+            nextDayButton.disabled = true;
+            // Ensure all strategy buttons are disabled after simulation
+            strategy1Button.disabled = true;
+            strategy2Button.disabled = true;
+            strategy3Button.disabled = true;
+            strategy4Button.disabled = true;
+            strategy5Button.disabled = true;
+            strategy6Button.disabled = true;
+            strategy7Button.disabled = true;
+            strategy8Button.disabled = true;
+            strategy9Button.disabled = true; // Disable Strategy 9 button
+            
+            // Force liquidation of all positions
+            stocks.forEach(stock => {
+                if (stock.sharesOwned > 0) {
+                    const value = stock.price * stock.sharesOwned;
+                    cash += value;
+                    stock.sharesOwned = 0;
+                }
+            });
+            
+            // Final UI update
+            updateUI();
+            
+            // Show game over screen
+            gameOverScreen.style.display = 'flex';
+            
+            // Show confetti if profit
+            if (profitLoss > 0 && typeof confetti === 'function') {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+
+        // Function to display AI trade history
+        function displayAiTradeHistory() {
+            // aiTradeHistoryDisplay.innerHTML = '<h3>AI 交易记录</h3>'; // Removed title
+            if (aiTradeHistory.length === 0) {
+                aiTradeHistoryDisplay.innerHTML = '<p>AI 未执行任何交易。</p>'; // Changed from += to = to ensure it's the only content
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            aiTradeHistory.forEach(trade => {
+                const li = document.createElement('li');
+                const actionColor = trade.type === 'Buy' ? 'var(--profit-color)' : 'var(--loss-color)';
+                li.innerHTML = `天 ${trade.day}: <strong style="color: ${actionColor};">${trade.type === 'Buy' ? '买入' : '卖出'}</strong> ${trade.quantity} 股 ${trade.stockName} @ ${formatCurrency(trade.price)}`;
+                ul.appendChild(li);
+            });
+            aiTradeHistoryDisplay.appendChild(ul);
+        }
+
+        // --- Event Listeners for individual stock actions and swipe ---
+        function attachActionListeners() {
+            stockTableBody.querySelectorAll('button').forEach(button => {
+                button.onclick = handleActionClick;
+            });
+            stockTableBody.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('touchstart', handleQtyTouchStart, { passive: true });
+                input.addEventListener('touchmove', handleQtyTouchMove, { passive: false }); // Prevent default scroll for gesture
+                input.addEventListener('touchend', handleQtyTouchEnd, { passive: true });
+                input.addEventListener('touchcancel', handleQtyTouchEnd, { passive: true });
+            });
+        }
+
+        function handleActionClick(e) {
+            const button = e.target;
+            const index = parseInt(button.getAttribute('data-index'));
+            const quantityInput = document.getElementById(`qty-${index}`);
+            if (button.classList.contains('buy-button')) {
+                const quantity = getQuantity(quantityInput); buyStock(index, quantity, false);
+            } else if (button.classList.contains('sell-button')) {
+                const quantity = getQuantity(quantityInput); sellStock(index, quantity, false);
+            } else if (button.classList.contains('close-button')) {
+                closePosition(index);
+            }
+            quantityInput.value = ''; // Clear input after action
+        }
+
+        function handleQtyTouchStart(e) {
+            if (e.touches.length === 1) { swipeStartY = e.touches[0].clientY; isSwiping = true; }
+            else { isSwiping = false; }
+        }
+        function handleQtyTouchMove(e) {
+            if (!isSwiping || e.touches.length !== 1) return;
+            const currentY = e.touches[0].clientY; const deltaY = swipeStartY - currentY;
+
+            let quantityChanged = false;
+
+            if (deltaY > SWIPE_THRESHOLD_PX) { // Swiping up
+                const inputElement = e.target; let currentValue = parseInt(inputElement.value) || 0;
+                currentValue += SWIPE_INCREMENT_QUANTITY; inputElement.value = currentValue;
+                swipeStartY = currentY; // Reset start position for continuous swipe
+                quantityChanged = true;
+            } else if (deltaY < -SWIPE_THRESHOLD_PX) { // Swiping down
+                const inputElement = e.target; let currentValue = parseInt(inputElement.value) || 0;
+                currentValue = Math.max(0, currentValue - SWIPE_INCREMENT_QUANTITY); inputElement.value = currentValue;
+                swipeStartY = currentY; // Reset start position for continuous swipe
+                quantityChanged = true;
+            }
+
+            if (quantityChanged) {
+                if (navigator.vibrate) { navigator.vibrate(20); } // Haptic feedback
+                e.preventDefault(); // Prevent page scrolling
+            } else if (Math.abs(deltaY) > 5) { // If there's a small movement but not enough for quantity change, still prevent scroll to make it feel responsive
+                e.preventDefault();
+            }
+        }
+        function handleQtyTouchEnd(e) { isSwiping = false; swipeStartY = 0; }
+
+        // --- Bulk Sell Functions ---
+        function bulkSell(percentage) {
+             if (!gameRunning) return;
+
+             const actionText = percentage === 1 ? "全仓" : percentage === 0.5 ? "半仓" : percentage === 0.25 ? "四分之一仓" : "部分";
+             logMessage(`尝试${actionText}卖出所有持仓股票...`, 'info', '📉');
+             let stocksSoldCount = 0;
+
+             stocks.forEach((stock, index) => {
+                 if (stock.sharesOwned > 0) {
+                     const quantityToSell = Math.floor(stock.sharesOwned * percentage);
+                     // Ensure quantity is at least 1 if percentage is positive and shares owned > 0
+                     const actualQuantityToSell = percentage > 0 ? Math.max(1, quantityToSell) : 0;
+                     // Do not sell more than owned
+                     const finalQuantityToSell = Math.min(actualQuantityToSell, stock.sharesOwned);
+
+                     if (finalQuantityToSell > 0) {
+                          // Use sellStock function, but mark as manual (isAI = false)
+                          if (sellStock(index, finalQuantityToSell, false, false)) {
+                               stocksSoldCount++;
+                          }
+                     }
+                 }
+             });
+
+             if (stocksSoldCount > 0) {
+                 logMessage(`成功${actionText}卖出 ${stocksSoldCount} 只股票。`, 'success', '✅');
+             } else {
+                 logMessage(`未能${actionText}卖出任何股票 (可能没有持仓或计算数量不足1股)。`, 'warn', '⚠️');
+             }
+             updateUI(); // Update UI after attempting sells
+        }
+
+        function sellAllStocks() { bulkSell(1); }
+        function sellHalfStocks() { bulkSell(0.5); }
+        function sellQuarterStocks() { bulkSell(0.25); }
+
+        // Add a delay for the AI simulation loop
+        const SIMULATION_DAY_DELAY_MS = 200; // Milliseconds delay between days
+
+        // New function to run the AI simulation, takes a strategy function as argument
+        async function runAiSimulation(strategyLogic, strategyName = "AI 助手") {
+            if (!gameRunning || currentDay === 0 || currentDay >= MAX_DAYS) {
+                if (currentDay === 0) {
+                    logMessage("自动交易: 需要至少一天的数据才能开始模拟，请先进入下一天。", 'warn');
+                } else if (currentDay >= MAX_DAYS) {
+                    logMessage("自动交易: 游戏已达到最大天数，模拟结束。", 'warn');
+                }
+                return;
+            }
+
+            activeStrategyName = strategyName; // Update the active strategy name
+            logMessage(`${strategyName}: 开始自动模拟...`, 'ai', '🤖');
+
+            // Disable buttons during simulation
+            nextDayButton.disabled = true;
+            strategy1Button.disabled = true;
+            strategy2Button.disabled = true;
+            strategy3Button.disabled = true;
+            strategy4Button.disabled = true;
+            strategy5Button.disabled = true;
+            strategy6Button.disabled = true;
+            strategy7Button.disabled = true;
+            strategy8Button.disabled = true;
+            strategy9Button.disabled = true; // Disable Strategy 9 button
+
+            while (gameRunning && currentDay < MAX_DAYS) {
+                // 先推进到下一天并更新价格/事件，这样策略才能对最新数据做出反应
+                nextDay(); 
+
+                // 在推进天数后检查游戏是否结束（例如达到最大天数）
+                if (!gameRunning || currentDay >= MAX_DAYS) {
+                    break;
+                }
+                
+                // 现在，执行选定策略的交易，它们将基于刚刚更新的当前天数据
+                strategyLogic(); 
+                
+                // Add delay between days
+                await new Promise(resolve => setTimeout(resolve, SIMULATION_DAY_DELAY_MS));
+            }
+
+            // Ensure buttons are properly enabled/disabled after simulation
+            nextDayButton.disabled = !gameRunning;
+            // Re-enable strategy buttons if game is still running and not on final day
+            if (gameRunning && currentDay < MAX_DAYS) {
+                strategy1Button.disabled = false;
+                strategy2Button.disabled = false;
+                strategy3Button.disabled = false;
+                strategy4Button.disabled = false;
+                strategy5Button.disabled = false;
+                strategy6Button.disabled = false;
+                strategy7Button.disabled = false;
+                strategy8Button.disabled = false;
+                strategy9Button.disabled = false; // Enable Strategy 9 button
+            }
+            // If game ended, endGame() already disabled them
+
+            logMessage(`${strategyName}: 自动模拟结束。`, 'ai', '🏁');
+            updateUI(); // Update UI after strategy actions
+        }
+
+        // Helper for SMA calculation
+        function calculateSMA(stockName, period) {
+            const prices = historicalPrices[stockName];
+            if (!prices || prices.length < period) return null; // Not enough data
+            const relevantPrices = prices.slice(-period);
+            const sum = relevantPrices.reduce((a, b) => a + b, 0);
+            return sum / period;
+        }
+
+        // --- Strategy 1: 涨跌幅追击者 (Volatility Chaser) ---
+        const VOLATILITY_CHASER_BUY_DROP_PERCENT = 3;   // 跌幅超过3%买入 (原: 5)
+        const VOLATILITY_CHASER_SELL_RISE_PERCENT = 2;  // 涨幅超过2%卖出 (原: 3)
+        const VOLATILITY_CHASER_PROFIT_TAKE_PERCENT = 7; // 止盈：相较买入价上涨7%卖出 (原: 10)
+        const VOLATILITY_CHASER_STOP_LOSS_PERCENT = 3;  // 止损：相较买入价下跌3%卖出 (原: 5)
+        const VOLATILITY_CHASER_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 4; // 每次交易数量 (doubled from *2)
+        const VOLATILITY_CHASER_MAX_CASH_PER_TRADE_PERCENT = 0.01; // 每次交易投入总现金的1%
+
+        function strategy1Logic() {
+            let actionsTaken = 0;
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const prevPrice = previousPrices[stock.name];
+                if (prevPrice === undefined || prevPrice === null || prevPrice === 0) return; // Need previous day data
+
+                const percentageChange = ((currentPrice - prevPrice) / prevPrice) * 100;
+                const assumedBuyPrice = aiBoughtPrices[stock.name]; // AI's recorded buy price
+
+                // Sell Logic (Priority: Stop Loss then Profit Take then Daily Rise)
+                if (stock.sharesOwned > 0) {
+                    // Stop Loss
+                    if (assumedBuyPrice && ((assumedBuyPrice - currentPrice) / assumedBuyPrice) * 100 >= VOLATILITY_CHASER_STOP_LOSS_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 1 (追击者): 止损卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (亏损: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🔴', false);
+                        }
+                        return; // Done with this stock for selling, prevent further actions
+                    }
+
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= VOLATILITY_CHASER_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 1 (追击者): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🟢', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Daily Rise Sell
+                    if (percentageChange >= VOLATILITY_CHASER_SELL_RISE_PERCENT) {
+                        // Sell a portion, e.g., 50% or fixed quantity, or all if small holding
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned / 2)); // Sell half or default
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 1 (追击者): 涨幅达标卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (+${percentageChange.toFixed(2)}%)`, 'ai', '📈', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Only if not held or if selling action wasn't taken)
+                // Ensure we have enough cash to buy at least a small quantity
+                if (cash > currentPrice * MIN_PRICE && percentageChange <= -VOLATILITY_CHASER_BUY_DROP_PERCENT) {
+                    const maxAffordableQuantity = Math.floor(cash * VOLATILITY_CHASER_MAX_CASH_PER_TRADE_PERCENT / currentPrice);
+                    const quantityToBuy = Math.min(VOLATILITY_CHASER_TRADE_QUANTITY, maxAffordableQuantity);
+
+                    if (quantityToBuy > 0) {
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 1 (追击者): 跌幅达标买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (${percentageChange.toFixed(2)}%)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+            });
+            if (actionsTaken > 0) {
+                logMessage(`策略 1 (追击者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 1 (追击者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI(); // Update UI after strategy actions
+        }
+
+        // --- Strategy 2: 价值投资者 (Value Investor) ---
+        const VALUE_INVESTOR_CHEAP_PRICE_THRESHOLD = 50; // 价格低于50元视为便宜股
+        const VALUE_INVESTOR_AVG_PRICE_PERCENT_THRESHOLD = 0.8; // 价格低于平均价格的80%视为便宜股
+        const VALUE_INVESTOR_PROFIT_TAKE_PERCENT = 25; // 止盈：相较买入价上涨25%卖出
+        const VALUE_INVESTOR_HOLD_QUANTITY_LIMIT = 500; // 单只股票持仓上限
+        const VALUE_INVESTOR_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 2; // 每次交易数量 (doubled from *1)
+
+        function strategy2Logic() {
+            let actionsTaken = 0;
+
+            const totalStockPrices = stocks.reduce((sum, stock) => sum + stock.price, 0);
+            const averageStockPrice = totalStockPrices / stocks.length;
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Profit Take)
+                if (stock.sharesOwned > 0 && assumedBuyPrice) {
+                    const profitPercent = ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100;
+                    if (profitPercent >= VALUE_INVESTOR_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 2 (价值投资者): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${profitPercent.toFixed(2)}%)`, 'ai', '💰', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Only if not held or held below limit and price is low)
+                if (cash > currentPrice * MIN_PRICE && stock.sharesOwned < VALUE_INVESTOR_HOLD_QUANTITY_LIMIT) {
+                    const isCheapByAbsolute = currentPrice < VALUE_INVESTOR_CHEAP_PRICE_THRESHOLD;
+                    const isCheapByRelative = currentPrice < averageStockPrice * VALUE_INVESTOR_AVG_PRICE_PERCENT_THRESHOLD;
+
+                    if (isCheapByAbsolute || isCheapByRelative) {
+                        const quantityToBuy = VALUE_INVESTOR_TRADE_QUANTITY;
+                        if (cash >= currentPrice * quantityToBuy) {
+                            if (buyStock(index, quantityToBuy, true, false)) {
+                                actionsTaken++;
+                                logMessage(`策略 2 (价值投资者): 发现价值股买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)}`, 'ai', '💎', false);
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 2 (价值投资者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 2 (价值投资者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 3: 事件响应者 (Event Responder) ---
+        const EVENT_RESPONDER_PROFIT_PERCENT_FOR_POSITIVE_EVENT = 8; // 因积极事件买入的股票，上涨8%后卖出 (原: 10)
+        const EVENT_RESPONDER_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 10; // 每次交易数量更大 (doubled from *5)
+
+        function strategy3Logic() {
+            let actionsTaken = 0;
+
+            const currentDayEvents = lastMarketEventHappened; // Get all events for the current day
+            // Removed: lastMarketEventHappened = []; // Reset for next day
+
+            // Process all events that happened today
+            currentDayEvents.forEach(eventData => {
+                const event = eventData.event;
+                const affectedStock = eventData.stock;
+                const index = stocks.indexOf(affectedStock);
+                if (index === -1) return; // Stock not found, skip
+
+                // React to Negative Event: Sell immediately
+                if (event.type === 'negative') {
+                    if (affectedStock.sharesOwned > 0) {
+                        if (sellStock(index, affectedStock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 3 (事件响应者): 因【${event.name}】止损卖出 ${affectedStock.sharesOwned} 股 ${affectedStock.name}。`, 'ai', event.icon, false);
+                        }
+                    }
+                }
+                // React to Positive Event: Buy
+                else if (event.type === 'positive') {
+                    if (cash > affectedStock.price * MIN_PRICE) {
+                        const quantityToBuy = Math.min(EVENT_RESPONDER_TRADE_QUANTITY, Math.floor(cash / affectedStock.price));
+                        if (quantityToBuy > 0) {
+                            if (buyStock(index, quantityToBuy, true, false)) {
+                                actionsTaken++;
+                                logMessage(`策略 3 (事件响应者): 因【${event.name}】买入 ${quantityToBuy} 股 ${affectedStock.name}。`, 'ai', event.icon, false);
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Additional logic: Sell existing holdings if they have made significant profit, regardless of current event
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+                if (stock.sharesOwned > 0 && assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= EVENT_RESPONDER_PROFIT_PERCENT_FOR_POSITIVE_EVENT) {
+                    if (sellStock(index, stock.sharesOwned, true, false)) {
+                        actionsTaken++;
+                        logMessage(`策略 3 (事件响应者): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '💰', false);
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 3 (事件响应者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 3 (事件响应者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 4: 小步快跑者 (Scalper/Day Trader) ---
+        const SCALPER_BUY_RISE_MIN_PERCENT = 0.1; // 价格上涨0.1%以上考虑买入 (原: 0.2)
+        const SCALPER_BUY_RISE_MAX_PERCENT = 0.5;   // 价格上涨超过0.5%不追高买入 (原: 1)
+        const SCALPER_PROFIT_TAKE_PERCENT = 0.8;   // 止盈：相较买入价上涨0.8%卖出 (原: 1)
+        const SCALPER_DAILY_DROP_SELL_PERCENT = 0.1; // 当日价格下跌0.1%则卖出（即使小亏） (原: 0.2)
+        const SCALPER_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY; // 每次交易数量较小 (doubled from /2, now *1)
+
+        function strategy4Logic() {
+            let actionsTaken = 0;
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const prevPrice = previousPrices[stock.name];
+                if (prevPrice === undefined || prevPrice === null || prevPrice === 0) return; // Need previous day data
+
+                const percentageChange = ((currentPrice - prevPrice) / prevPrice) * 100;
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Priority: Profit Take then Daily Drop Sell)
+                if (stock.sharesOwned > 0) {
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= SCALPER_PROFIT_TAKE_PERCENT) {
+                        // Sell a portion, or all if small holding
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned * 0.5));
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 4 (小步快跑者): 止盈卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '📈', false);
+                        }
+                        // Do not return here, as we might buy it again on the same day if conditions are met
+                    }
+                    // Daily Drop Sell
+                    else if (percentageChange <= -SCALPER_DAILY_DROP_SELL_PERCENT) {
+                        // Sell a portion, or all if small holding
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned * 0.3));
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 4 (小步快跑者): 趋势反转卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (${percentageChange.toFixed(2)}%)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Only if not held or held in small quantity and price is slightly rising/stable)
+                if (cash > currentPrice * MIN_PRICE && stock.sharesOwned < SCALPER_TRADE_QUANTITY * 2) { // Only buy if not holding too much
+                    if (percentageChange >= SCALPER_BUY_RISE_MIN_PERCENT && percentageChange <= SCALPER_BUY_RISE_MAX_PERCENT) {
+                        const quantityToBuy = SCALPER_TRADE_QUANTITY;
+                        if (cash >= currentPrice * quantityToBuy) {
+                            if (buyStock(index, quantityToBuy, true, false)) {
+                                actionsTaken++;
+                                logMessage(`策略 4 (小步快跑者): 发现微涨买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (+${percentageChange.toFixed(2)}%)`, 'ai', '⚡', false);
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 4 (小步快跑者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 4 (小步快跑者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 5: 多元化投资者 (Diversified Investor) ---
+        const DIVERSIFIED_INVESTOR_TARGET_STOCKS = 50; // 目标持有50只不同股票
+        const DIVERSIFIED_INVESTOR_MAX_SINGLE_STOCK_PERCENT_OF_PORTFOLIO = 0.03; // 单只股票市值不应超过总市值的3%
+        const DIVERSIFIED_INVESTOR_TRADE_QUANTITY = DEFAULT_TRADE_QUANTITY * 2; // 每次交易数量
+        const DIVERSIFIED_INVESTOR_TARGET_PORTFOLIO_PERCENT_OF_NET_WORTH = 0.60; // 目标持仓市值占总资产的比例
+
+        function strategy5Logic() {
+            let actionsTaken = 0;
+
+            const portfolioValue = calculatePortfolioValue();
+            const netWorth = calculateNetWorth(); // Get current net worth
+            const currentHeldStocksCount = stocks.filter(stock => stock.sharesOwned > 0).length;
+
+            // 卖出逻辑：再平衡，卖出占比过高的股票
+            stocks.forEach((stock, index) => {
+                if (stock.sharesOwned > 0) {
+                    const stockCurrentValue = stock.price * stock.sharesOwned;
+                    // 避免除以零，确保 portfolioValue > 0
+                    if (portfolioValue > 0 && (stockCurrentValue / portfolioValue) > DIVERSIFIED_INVESTOR_MAX_SINGLE_STOCK_PERCENT_OF_PORTFOLIO) {
+                        // 计算需要卖出的数量以达到目标权重
+                        const targetValue = portfolioValue * DIVERSIFIED_INVESTOR_MAX_SINGLE_STOCK_PERCENT_OF_PORTFOLIO;
+                        const excessShares = stock.sharesOwned - Math.floor(targetValue / stock.price);
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(excessShares / 2)); // 卖出超额部分的一半，至少默认数量
+
+                        if (quantityToSell > 0) {
+                            if (sellStock(index, quantityToSell, true, false)) {
+                                actionsTaken++;
+                                logMessage(`策略 5 (多元化): 再平衡卖出 ${quantityToSell} 股 ${stock.name}，占比过高。`, 'ai', '⚖️', false);
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 买入逻辑：增加持仓种类，或增加低占比股票，同时确保持仓市值达到目标比例
+            const targetPortfolioValue = netWorth * DIVERSIFIED_INVESTOR_TARGET_PORTFOLIO_PERCENT_OF_NET_WORTH;
+            const cashToInvest = targetPortfolioValue - portfolioValue;
+
+            // Only buy if current portfolio value is significantly less than target
+            if (cashToInvest > 0 && cash > 0) {
+                // Filter for stocks not excessively held and ideally at a good price
+                const potentialBuyCandidates = stocks.filter(stock => {
+                    const stockValue = stock.price * stock.sharesOwned;
+                    // Consider buying if not held, or if held but its value is below max single stock percent of portfolio
+                    return stock.sharesOwned === 0 || (portfolioValue > 0 && (stockValue / portfolioValue < DIVERSIFIED_INVESTOR_MAX_SINGLE_STOCK_PERCENT_OF_PORTFOLIO * 0.8)); // Buy if well below target single stock allocation
+                });
+
+                // Prioritize buying stocks to increase overall portfolio value, but also spread across candidates
+                // Distribute cashToInvest among multiple stocks
+                let remainingCashToInvest = cashToInvest; // Use cashToInvest as the budget
+                let budgetPerStock = Math.min(remainingCashToInvest / Math.max(1, potentialBuyCandidates.length), DIVERSIFIED_INVESTOR_TRADE_QUANTITY * stocks[0].price * 2); // Limit per stock budget
+
+                // Shuffle candidates to ensure diversity in buying order
+                potentialBuyCandidates.sort(() => Math.random() - 0.5);
+
+                for (let i = 0; i < potentialBuyCandidates.length && remainingCashToInvest > 0; i++) {
+                    const stock = potentialBuyCandidates[i];
+                    const index = stocks.indexOf(stock);
+
+                    const maxQuantityAffordable = Math.floor(Math.min(remainingCashToInvest, budgetPerStock) / stock.price); // How much we can afford for this specific stock
+                    const quantityToBuy = Math.max(DEFAULT_TRADE_QUANTITY, Math.min(DIVERSIFIED_INVESTOR_TRADE_QUANTITY, maxQuantityAffordable)); // Buy at least default, up to trade quantity, and what's affordable
+
+                    if (quantityToBuy > 0 && cash >= stock.price * quantityToBuy) {
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            remainingCashToInvest -= (stock.price * quantityToBuy * (1 + TRANSACTION_FEE_PERCENT / 100)); // Deduct cost and fee
+                            logMessage(`策略 5 (多元化): 为维持目标仓位买入 ${quantityToBuy} 股 ${stock.name}。`, 'ai', '📈', false);
+                        }
+                    }
+                }
+            }
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 5 (多元化): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 5 (多元化): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 6: 趋势追踪者 (Trend Follower) ---
+        function strategy6Logic() {
+            let actionsTaken = 0;
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const sma = calculateSMA(stock.name, TREND_FOLLOW_SMA_PERIOD);
+                if (sma === null) return; // Not enough data for SMA
+
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Priority: Stop Loss, Profit Take, then Trend Reversal)
+                if (stock.sharesOwned > 0) {
+                    // Stop Loss
+                    if (assumedBuyPrice && ((assumedBuyPrice - currentPrice) / assumedBuyPrice) * 100 >= TREND_FOLLOW_STOP_LOSS_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 6 (趋势追踪者): 止损卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (亏损: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🔴', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= TREND_FOLLOW_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 6 (趋势追踪者): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🟢', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Trend Reversal Sell
+                    if (currentPrice < sma * (1 - TREND_FOLLOW_SELL_BELOW_SMA_PERCENT / 100)) {
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned / 2)); // Sell half or default
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 6 (趋势追踪者): 趋势反转卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (低于SMA)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Trend Following)
+                if (stock.sharesOwned === 0 && cash > currentPrice * MIN_PRICE) { // Only buy if not held and enough cash
+                    if (currentPrice > sma * (1 + TREND_FOLLOW_BUY_ABOVE_SMA_PERCENT / 100)) {
+                        const quantityToBuy = TREND_FOLLOW_TRADE_QUANTITY;
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 6 (趋势追踪者): 趋势确认买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (高于SMA)`, 'ai', '📈', false);
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 6 (趋势追踪者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 6 (趋势追踪者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 7: 价值回归者 (Mean Reversion) ---
+        function strategy7Logic() {
+            let actionsTaken = 0;
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const sma = calculateSMA(stock.name, MEAN_REVERSION_SMA_PERIOD);
+                if (sma === null) return; // Not enough data for SMA
+
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Priority: Stop Loss, Profit Take, then Reversion Sell)
+                if (stock.sharesOwned > 0) {
+                    // Stop Loss
+                    if (assumedBuyPrice && ((assumedBuyPrice - currentPrice) / assumedBuyPrice) * 100 >= MEAN_REVERSION_STOP_LOSS_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 7 (价值回归者): 止损卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (亏损: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🔴', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= MEAN_REVERSION_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 7 (价值回归者): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🟢', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Mean Reversion Sell (price significantly above SMA)
+                    if (currentPrice > sma * (1 + MEAN_REVERSION_SELL_ABOVE_SMA_PERCENT / 100)) {
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned / 2)); // Sell half or default
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 7 (价值回归者): 价格偏离高点卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (高于SMA)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Mean Reversion - price significantly below SMA)
+                if (cash > currentPrice * MIN_PRICE && stock.sharesOwned < MEAN_REVERSION_TRADE_QUANTITY * 5) { // Only buy if enough cash and not too much held
+                    if (currentPrice < sma * (1 - MEAN_REVERSION_BUY_BELOW_SMA_PERCENT / 100)) {
+                        const quantityToBuy = MEAN_REVERSION_TRADE_QUANTITY;
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 7 (价值回归者): 价格偏离低点买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (低于SMA)`, 'ai', '📈', false);
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 7 (价值回归者): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 7 (价值回归者): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 8: 趋势追踪优化 (Trend Tracking Optimization) ---
+        function strategy8Logic() {
+            let actionsTaken = 0;
+            logMessage(`策略 8 (趋势追踪优化): 正在执行本轮逻辑... (天数: ${currentDay})`, 'ai', '🔍', false); // Always log when logic runs
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const sma = calculateSMA(stock.name, TREND_TRACKING_OPTIMIZED_SMA_PERIOD);
+                if (sma === null) return; // Not enough data for SMA
+
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Priority: Stop Loss, Profit Take, then Trend Reversal)
+                if (stock.sharesOwned > 0) {
+                    // Stop Loss
+                    if (assumedBuyPrice && ((assumedBuyPrice - currentPrice) / assumedBuyPrice) * 100 >= TREND_TRACKING_OPTIMIZED_STOP_LOSS_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 8 (趋势追踪优化): 止损卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (亏损: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🔴', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= TREND_TRACKING_OPTIMIZED_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 8 (趋势追踪优化): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🟢', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Trend Reversal Sell
+                    if (currentPrice < sma * (1 - TREND_TRACKING_OPTIMIZED_SELL_BELOW_SMA_PERCENT / 100)) {
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned / 2)); // Sell half or default
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 8 (趋势追踪优化): 趋势反转卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (低于SMA)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Trend Following)
+                if (stock.sharesOwned === 0 && cash > currentPrice * MIN_PRICE) { // Only buy if not held and enough cash
+                    if (currentPrice > sma * (1 + TREND_TRACKING_OPTIMIZED_BUY_ABOVE_SMA_PERCENT / 100)) {
+                        const quantityToBuy = TREND_TRACKING_OPTIMIZED_TRADE_QUANTITY;
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 8 (趋势追踪优化): 趋势确认买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (高于SMA)`, 'ai', '📈', false);
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 8 (趋势追踪优化): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 8 (趋势追踪优化): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Strategy 9: 精准趋势 (Precise Trend) ---
+        function strategy9Logic() {
+            let actionsTaken = 0;
+            logMessage(`策略 9 (精准趋势): 正在执行本轮逻辑... (天数: ${currentDay})`, 'ai', '🔍', false); // Always log when logic runs
+
+            stocks.forEach((stock, index) => {
+                const currentPrice = stock.price;
+                const sma = calculateSMA(stock.name, PRECISE_TREND_SMA_PERIOD);
+                if (sma === null) return; // Not enough data for SMA
+
+                const assumedBuyPrice = aiBoughtPrices[stock.name];
+
+                // Sell Logic (Priority: Stop Loss, Profit Take, then Trend Reversal)
+                if (stock.sharesOwned > 0) {
+                    // Stop Loss
+                    if (assumedBuyPrice && ((assumedBuyPrice - currentPrice) / assumedBuyPrice) * 100 >= PRECISE_TREND_STOP_LOSS_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 9 (精准趋势): 止损卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (亏损: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🔴', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Profit Take
+                    if (assumedBuyPrice && ((currentPrice - assumedBuyPrice) / assumedBuyPrice) * 100 >= PRECISE_TREND_PROFIT_TAKE_PERCENT) {
+                        if (sellStock(index, stock.sharesOwned, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 9 (精准趋势): 止盈卖出 ${stock.sharesOwned} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (利润: ${((currentPrice - assumedBuyPrice) / assumedBuyPrice * 100).toFixed(2)}%)`, 'ai', '🟢', false);
+                        }
+                        return; // Done with this stock for selling
+                    }
+
+                    // Trend Reversal Sell
+                    if (currentPrice < sma * (1 - PRECISE_TREND_SELL_BELOW_SMA_PERCENT / 100)) {
+                        const quantityToSell = Math.max(DEFAULT_TRADE_QUANTITY, Math.floor(stock.sharesOwned / 2)); // Sell half or default
+                        if (sellStock(index, quantityToSell, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 9 (精准趋势): 趋势反转卖出 ${quantityToSell} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (低于SMA)`, 'ai', '📉', false);
+                        }
+                    }
+                }
+
+                // Buy Logic (Trend Following)
+                if (stock.sharesOwned === 0 && cash > currentPrice * MIN_PRICE) { // Only buy if not held and enough cash
+                    if (currentPrice > sma * (1 + PRECISE_TREND_BUY_ABOVE_SMA_PERCENT / 100)) {
+                        const quantityToBuy = PRECISE_TREND_TRADE_QUANTITY;
+                        if (buyStock(index, quantityToBuy, true, false)) {
+                            actionsTaken++;
+                            logMessage(`策略 9 (精准趋势): 趋势确认买入 ${quantityToBuy} 股 ${stock.name} @ ${formatCurrency(currentPrice)} (高于SMA)`, 'ai', '📈', false);
+                        }
+                    }
+                }
+            });
+
+            if (actionsTaken > 0) {
+                logMessage(`策略 9 (精准趋势): 本轮完成 ${actionsTaken} 笔交易。`, 'ai', '✅');
+            } else {
+                logMessage(`策略 9 (精准趋势): 本轮未执行任何交易。`, 'ai', 'ℹ️', false);
+            }
+            updateUI();
+        }
+
+        // --- Initial Call ---
+        document.addEventListener('DOMContentLoaded', initializeGame);
+
+        nextDayButton.addEventListener('click', nextDay); // Re-adding the missing event listener
+
+        playAgainButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            initializeGame();
+        });
+
+        // Add listeners for each strategy button
+        strategy1Button.addEventListener('click', () => runAiSimulation(strategy1Logic, '策略 1 (涨跌幅追击者)'));
+        strategy2Button.addEventListener('click', () => runAiSimulation(strategy2Logic, '策略 2 (价值投资者)'));
+        strategy3Button.addEventListener('click', () => runAiSimulation(strategy3Logic, '策略 3 (事件响应者)'));
+        strategy4Button.addEventListener('click', () => runAiSimulation(strategy4Logic, '策略 4 (小步快跑者)'));
+        strategy5Button.addEventListener('click', () => runAiSimulation(strategy5Logic, '策略 5 (多元化投资者)'));
+
+        // Add listeners for each strategy button
+        strategy6Button.addEventListener('click', () => runAiSimulation(strategy6Logic, '策略 6 (趋势追踪者)'));
+        strategy7Button.addEventListener('click', () => runAiSimulation(strategy7Logic, '策略 7 (价值回归者)'));
+        strategy8Button.addEventListener('click', () => runAiSimulation(strategy8Logic, '策略 8 (趋势追踪优化)'));
+        strategy9Button.addEventListener('click', () => runAiSimulation(strategy9Logic, '策略 9 (精准趋势)'));
+
+        // Add listeners for bulk action buttons
+        buyAllStocksButton.addEventListener('click', buyAllStocks);
+        sellAllButton.addEventListener('click', sellAllStocks);
+        sellHalfButton.addEventListener('click', sellHalfStocks);
+        sellQuarterButton.addEventListener('click', sellQuarterStocks);
+
+        // --- Manual Bulk Buy Function ---
+        function buyAllStocks() {
+             if (!gameRunning) return;
+
+             logMessage("尝试为所有股票雨露均沾...", 'info', '🛒');
+             let stocksBoughtCount = 0;
+
+             stocks.forEach((stock, index) => {
+                 const quantityToBuy = 100; // Fixed quantity
+                 // Check if we can afford at least this quantity
+                 if (cash >= stock.price * quantityToBuy) {
+                      // Use buyStock function, but mark as manual (isAI = false)
+                      if (buyStock(index, quantityToBuy, false, false)) {
+                           stocksBoughtCount++;
+                      }
+                 }
+             });
+
+             if (stocksBoughtCount > 0) {
+                 logMessage(`成功为 ${stocksBoughtCount} 只股票买入 100 股。`, 'success', '✅');
+             } else {
+                 logMessage("未能为任何股票买入 100 股 (可能现金不足)。", 'warn', '⚠️');
+             }
+             updateUI(); // Update UI after attempting buys
+        }
+
+        // --- Help Modal Logic ---
+        function populateStrategyExplanations() {
+            const strategies = [
+                { id: 'strategy1Button', name: '策略 1: 涨跌幅追击者', description: '根据股票每日价格的显著跌幅买入，在显著涨幅、达到止盈点或触及止损线时卖出。追求短期波动收益。参数：买入跌幅≥3%，卖出涨幅≥2%，止盈≥7%，止损≥3%。单次购买400股。'},
+                { id: 'strategy2Button', name: '策略 2: 价值投资者', description: '寻找价格低于平均水平或绝对值较低的"便宜股"，长期持有。在价格大幅上涨并达到止盈点时卖出。注重长期价值投资。参数：低于50元或平均价格的80%买入，止盈≥25%。单次购买200股。'},
+                { id: 'strategy3Button', name: '策略 3: 事件响应者', description: '积极响应市场事件：若股票受正面事件影响则买入；若受负面事件影响则卖出。同时，也会对已持有的高利润股票进行止盈。参数：因正面事件买入的股票上涨8%后止盈。单次购买1000股。'},
+                { id: 'strategy4Button', name: '策略 4: 小步快跑者', description: '追求频繁的小额交易。在股票小幅上涨时快速买入，并在达到微薄利润或出现小幅下跌时迅速卖出。注重日内交易和资金周转。参数：买入涨幅0.1%-0.5%，止盈≥0.8%，当日跌幅≥0.1%止损。单次购买100股。'},
+                { id: 'strategy5Button', name: '策略 5: 多元化投资者', description: '旨在构建并维持一个广泛分散的投资组合。在持股数量不足或某些股票权重过低时买入；在股票市值占比过高时卖出以进行再平衡。参数：目标持有50只股票，单只股票市值不超过总市值3%，持仓市值应占总资产的60%。单次购买400股。'},
+                { id: 'strategy6Button', name: '策略 6: 趋势追踪者', description: '识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。参数：基于5日SMA，价格高于SMA 0.5%买入，低于SMA 0.5%卖出，止盈10%，止损5%。单次购买400股。'},
+                { id: 'strategy7Button', name: '策略 7: 价值回归者', description: '利用股票价格围绕其内在价值波动的特性。当价格显著低于或高于内在价值时进行交易，期待价格回归。参数：基于10日SMA，价格低于SMA 3%买入，高于SMA 3%卖出，止盈20%，止损3%。单次购买200股。'},
+                { id: 'strategy8Button', name: '策略 8: 趋势追踪优化', description: '识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。参数：基于5日SMA，价格高于SMA 0.5%买入，低于SMA 0.5%卖出，止盈15%，止损5%。单次购买400股。'},
+                { id: 'strategy9Button', name: '策略 9: 精准趋势', description: '识别并跟随股票的短期价格趋势。当价格持续上涨时买入，持续下跌时卖出。参数：基于5日SMA，价格高于SMA 0.75%买入，低于SMA 0.75%卖出，止盈12%，止损5%。单次购买400股。'}
+            ];
+
+            strategyExplanationContent.innerHTML = ''; // Clear previous content
+
+            strategies.forEach(strategy => {
+                const h3 = document.createElement('h3');
+                h3.textContent = strategy.name;
+                strategyExplanationContent.appendChild(h3);
+
+                const p = document.createElement('p');
+                p.textContent = strategy.description;
+                strategyExplanationContent.appendChild(p);
+            });
+        }
+
+        // Event listener for opening the modal
+        helpIcon.addEventListener('click', () => {
+            populateStrategyExplanations(); // Populate content before showing
+            strategyHelpModal.style.display = 'block';
+        });
+
+        // Event listener for closing the modal
+        closeButton.addEventListener('click', () => {
+            strategyHelpModal.style.display = 'none';
+        });
+
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', (event) => {
+            if (event.target == strategyHelpModal) {
+                strategyHelpModal.style.display = 'none';
+            }
+        });
+
+    </script>
+
+    <!-- Confetti library for winning effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</body>
+</html>
